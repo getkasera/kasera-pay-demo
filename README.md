@@ -48,6 +48,38 @@ then set your webhook endpoint in the dashboard (Developer → Webhook) to
 No tunnel handy? The **polling** case (3) demonstrates the same
 "order flips to paid" loop with zero public exposure.
 
+## Local demo — against the Kasera Pay dev stack (verified)
+
+With the product's dev stack running (gateway on `:8888`, Postgres on
+`:55432`), this whole demo works end-to-end with no tunnel and no real money.
+What was verified, exactly:
+
+1. **Credentials via the real dashboard endpoints** (no seeding shortcuts):
+   log in as a seed merchant, then `POST /api/v1/developer/keys` returns the
+   `kp_live_...` secret once — that goes into `.env` as `KASERA_API_KEY`.
+2. **Webhook registration is impossible locally** — confirmed, not assumed:
+   `PUT /api/v1/developer/webhook` rejects `http://localhost:3300/webhook`
+   with `url_not_https`, and `https://localhost:3300/webhook` with
+   `url_private` (the SSRF guard allows public https only, no dev override).
+   So `WEBHOOK_SECRET` in `.env` is a value you invent;
+   `scripts/simulate-paid.sh` signs with it using the product's exact scheme.
+3. **`scripts/simulate-paid.sh <payreq_id>`** — LOCAL DEMOS ONLY — fakes the
+   buyer paying: it calls the product's own dev-mode simulator
+   (`POST /api/v1/checkout/<token>/simulate-payment`, the same endpoint the
+   checkout page's simulate button uses, which runs the real
+   pending→paid transition including the webhook outbox row), then delivers
+   the signed `payment.paid` webhook to this demo itself, since the product's
+   dispatcher can't (see 2).
+
+Verified end-to-end, one order each:
+
+| Case | Result |
+|------|--------|
+| 1 Redirect | ✅ order created, `checkout_url` serves the hosted checkout page; after simulate-paid the checkout page shows **paid**. Caveat: the buyer ends on Kasera's checkout page — the product has no `success_redirect_url` yet, so "back to the store" is a manual browser-back. This README will drop this note when that ships. |
+| 2 Webhook | ✅ simulate-paid delivered the signed event; the demo verified the HMAC and flipped the order to **paid** (no polling involved — case≠polling never refreshes from Kasera, so the webhook path alone did it). |
+| 3 Polling | ✅ with the webhook send skipped (`WEBHOOK_SECRET= scripts/simulate-paid.sh ...`), `GET /api/orders/{id}` refreshed from `GET /v1/payment-requests/:id` and returned **paid**. |
+| 0 No code | n/a — lives entirely in the Kasera dashboard, nothing to wire. |
+
 ## Endpoints (all in `main.go`)
 
 ```
