@@ -1,0 +1,5 @@
+# Secrets live in .env only — never commit it. Copy .env.example instead.
+.env
+
+# Compiled binary
+kasera-pay-demo
