@@ -13,7 +13,7 @@ all* to a production-style webhook flow. It is deliberately minimal:
 | # | Case | How the shop learns about payment |
 |---|------|-----------------------------------|
 | 0 | [No code](public/nonapi.html) | It doesn't need to — you create payment links in the dashboard and share them (WhatsApp, invoice, printed QRIS). |
-| 1 | Redirect only | It doesn't (on purpose). Backend creates a payment request, buyer is redirected to checkout, and… that's it. Shows *why* cases 2 and 3 exist. |
+| 1 | Redirect only | It doesn't (on purpose). Backend creates a payment request, buyer is redirected to checkout — and after paying, Kasera's `return_url` can send them back to `order.html?status=paid`. But a query param proves nothing: the shop backend still never learns about the payment. Shows *why* cases 2 and 3 exist. |
 | 2 | Webhook | Kasera POSTs a signed `payment.paid` event to `POST /webhook`; the backend verifies the HMAC signature and marks the order paid. The production way. |
 | 3 | Polling | The backend asks Kasera `GET /v1/payment-requests/:id` ("paid yet?") whenever the order page checks in. No public URL needed — great for local dev. |
 
@@ -75,10 +75,81 @@ Verified end-to-end, one order each:
 
 | Case | Result |
 |------|--------|
-| 1 Redirect | ✅ order created, `checkout_url` serves the hosted checkout page; after simulate-paid the checkout page shows **paid**. Caveat: the buyer ends on Kasera's checkout page — the product has no `success_redirect_url` yet, so "back to the store" is a manual browser-back. This README will drop this note when that ships. |
+| 1 Redirect | ✅ order created, `checkout_url` serves the hosted checkout page (now rendering the `order_items` line we send); after simulate-paid the checkout page shows **paid**. Caveat: "back to the store" (`return_url`) shipped in the product, but it accepts **https only** — no dev exception — and this demo serves plain http, so locally it stays a manual browser-back. See "Redirect-back" below. |
 | 2 Webhook | ✅ simulate-paid delivered the signed event; the demo verified the HMAC and flipped the order to **paid** (no polling involved — case≠polling never refreshes from Kasera, so the webhook path alone did it). |
 | 3 Polling | ✅ with the webhook send skipped (`WEBHOOK_SECRET= scripts/simulate-paid.sh ...`), `GET /api/orders/{id}` refreshed from `GET /v1/payment-requests/:id` and returned **paid**. |
 | 0 No code | n/a — lives entirely in the Kasera dashboard, nothing to wire. |
+
+## What the demo sends Kasera (KAS-2203 fields)
+
+Order creation now uses the enriched payment-request body:
+
+```json
+{
+  "amount": 189000,
+  "description": "Kasera Threads — Batik Print Tee",
+  "external_id": "a1b2c3d4e5f60718",
+  "merchant_ref": "a1b2c3d4e5f60718",
+  "customer": { "name": "Demo Buyer" },
+  "order_items": [
+    { "name": "Batik Print Tee", "price": 189000, "quantity": 1 }
+  ]
+}
+```
+
+- **`merchant_ref`** — our order ID, echoed back in every response (shown on
+  the order page so refs line up between our logs and Kasera's dashboard).
+  It also doubles as the idempotency scope when no `Idempotency-Key` header
+  is sent — this demo sends the header, so it's purely a reference here.
+- **`order_items`** — rendered on the hosted checkout so the buyer sees the
+  item line, not just an amount. Kasera rejects a list whose
+  Σ price×quantity disagrees with `amount`; `amount` stays authoritative.
+- **`customer`** — who the developer says is paying; shows up in the
+  dashboard.
+
+And the response now carries them back:
+
+```json
+{
+  "id": "payreq_9b2f…",
+  "status": "pending",
+  "amount": 189000,
+  "merchant_ref": "a1b2c3d4e5f60718",
+  "customer": { "name": "Demo Buyer" },
+  "order_items": [
+    { "name": "Batik Print Tee", "price": 189000, "quantity": 1 }
+  ],
+  "checkout_url": "http://localhost:8888/p/…",
+  "payment_method": "QRIS",
+  "instructions": { "title": "Cara membayar dengan QRIS", "steps": ["…"] }
+}
+```
+
+### Redirect-back (`return_url`) — docs-only in this demo
+
+The full-fat body would also include:
+
+```json
+{
+  "return_url": "http://localhost:3300/order.html?order=a1b2c3d4e5f60718"
+}
+```
+
+After payment the hosted checkout sends the buyer to
+`<return_url>?id=payreq_…&status=paid`. But Kasera validates `return_url`
+as **https only** — a payment page never redirects somewhere unencrypted,
+and (verified against the validator) there is **no dev allowance for http
+localhost** — so this plain-http demo cannot send it and the field stays out
+of `main.go`.
+
+<!-- TODO: send return_url from main.go once this demo runs behind https
+     (tunnel or real deploy), or if the product grows a dev allowance for
+     http://localhost. order.html already handles the arrival. -->
+
+`order.html` handles the arrival anyway (`?order=…&status=paid`) — and
+deliberately **never trusts the query param**: anyone can type
+`status=paid` into an address bar, so the page always confirms via
+`GET /api/orders/{id}` before showing PAID.
 
 ## Endpoints (all in `main.go`)
 

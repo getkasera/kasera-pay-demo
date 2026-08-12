@@ -38,9 +38,11 @@
       redirect: `<strong>Case 1 — redirect only.</strong> When you click
         <em>Beli</em>, our backend creates a payment request with its API key
         (the browser never sees the key, nor sets the price) and you are
-        redirected straight to Kasera's checkout. That's the entire
-        integration — but note the catch: after you pay, <em>this shop has no
-        idea</em>. Nothing tells it. Cases 2 and 3 exist to fix exactly that.`,
+        redirected straight to Kasera's checkout — which now renders the
+        <code>order_items</code> we send, so the buyer sees the actual item
+        line, not just an amount. That's the entire integration — but note
+        the catch: after you pay, <em>this shop has no idea</em>. Nothing
+        tells it. Cases 2 and 3 exist to fix exactly that.`,
       webhook: `<strong>Case 2 — webhook.</strong> Same purchase, but our
         backend has registered a webhook URL with Kasera. The moment you pay,
         Kasera POSTs a signed <code>payment.paid</code> event to our server,
@@ -89,8 +91,10 @@
           // the shop never learns about the payment.)
           location.href = data.checkout_url;
         } else {
-          // Cases 2 & 3: go to OUR order page, which offers the checkout
-          // link and watches the status live.
+          // Cases 2 & 3: go to OUR order page — the confirmation shows the
+          // merchant_ref Kasera echoed back (our order ID, so refs line up
+          // between our logs and Kasera's dashboard) and watches the status
+          // live. The hosted checkout it links to renders our order_items.
           location.href = "order.html?id=" + encodeURIComponent(data.id);
         }
       } catch (err) {

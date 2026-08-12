@@ -60,6 +60,7 @@ type Order struct {
 	Amount           int64  `json:"amount"`
 	Case             string `json:"case"` // redirect | webhook | polling
 	PaymentRequestID string `json:"payment_request_id"`
+	MerchantRef      string `json:"merchant_ref"` // our ref, echoed back by Kasera
 	CheckoutURL      string `json:"checkout_url"`
 	Status           string `json:"status"` // pending | paid | expired
 }
@@ -87,6 +88,7 @@ type paymentRequest struct {
 	ID          string `json:"id"`     // "payreq_<uuid>"
 	Status      string `json:"status"` // pending | paid | expired | canceled
 	CheckoutURL string `json:"checkout_url"`
+	MerchantRef string `json:"merchant_ref"` // our order ID, echoed back
 }
 
 // createPaymentRequest asks Kasera for a hosted checkout page.
@@ -98,6 +100,24 @@ func createPaymentRequest(orderID string, it Item) (*paymentRequest, error) {
 		"amount":      it.Price, // from OUR table, never from the client
 		"description": "Kasera Threads — " + it.Name,
 		"external_id": orderID, // comes back in the webhook, links it to our order
+		// merchant_ref is our own reference, echoed back in every response —
+		// and it doubles as the idempotency scope if you skip the header.
+		"merchant_ref": orderID,
+		// customer + order_items are display detail: the hosted checkout
+		// renders the item lines, and Kasera's dashboard shows who bought.
+		// Kasera rejects order_items whose Σ price×quantity ≠ amount, so the
+		// amount above stays authoritative.
+		"customer": map[string]string{"name": "Demo Buyer"},
+		"order_items": []map[string]any{
+			{"name": it.Name, "price": it.Price, "quantity": 1},
+		},
+		// return_url would bring the buyer back here after paying:
+		//   "return_url": "http://localhost:3300/order.html?order=" + orderID,
+		// but Kasera requires https (a payment page never redirects somewhere
+		// unencrypted, no dev exception), and this demo serves plain http —
+		// so it stays a comment. See README "Redirect-back". order.html
+		// already handles the ?order=&status=paid arrival for when you run
+		// this demo behind https (e.g. a tunnel).
 	})
 	req, err := http.NewRequest("POST", apiBase+"/v1/payment-requests", bytes.NewReader(body))
 	if err != nil {
@@ -184,6 +204,7 @@ func handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o.PaymentRequestID = pr.ID
+	o.MerchantRef = pr.MerchantRef // echoed back by Kasera; equals o.ID
 	o.CheckoutURL = pr.CheckoutURL
 
 	mu.Lock()

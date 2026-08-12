@@ -25,6 +25,7 @@
       <dt>Item</dt><dd id="o-item"></dd>
       <dt>Amount</dt><dd id="o-amount"></dd>
       <dt>Order ID</dt><dd><code id="o-id"></code></dd>
+      <dt>Merchant ref</dt><dd><code id="o-mref"></code></dd>
       <dt>Kasera payment request</dt><dd><code id="o-payreq"></code></dd>
       <dt>Status</dt><dd><span class="status" id="o-status"></span></dd>
     </dl>
@@ -50,15 +51,30 @@
 
   <script src="store.js"></script>
   <script>
-    const id = new URLSearchParams(location.search).get("id");
+    // Two ways to arrive here: our own store links use ?id=..., Kasera's
+    // checkout redirect-back uses the return_url we gave it, which carries
+    // ?order=... (plus Kasera's own ?id=payreq_...&status=paid).
+    const params = new URLSearchParams(location.search);
+    const id = params.get("order") || params.get("id");
+
+    // NEVER trust ?status=paid. It is a query parameter — anyone can type
+    // it into the address bar; it proves nothing about money moving. It is
+    // only a hint that we arrived via the checkout's redirect-back. The
+    // status rendered below always comes from GET /api/orders/:id — our
+    // backend, which learned about payment through a channel a buyer cannot
+    // forge (signed webhook, or asking Kasera directly).
+    const cameBack = params.get("status") === "paid";
 
     // What this page's polling actually MEANS differs per case, and the demo
     // is honest about it:
     const COPY = {
-      redirect: `<strong>Case 1 — redirect.</strong> This page polls our
-        backend, but in the redirect-only flow <em>nothing ever updates the
-        backend</em> — the status below will sit at pending forever, even
-        after you pay. Not a bug: it's the limitation the
+      redirect: `<strong>Case 1 — redirect.</strong> Kasera's checkout can
+        now send the buyer back here (<code>return_url</code>, with
+        <code>?status=paid</code> appended) — but a query parameter is not
+        proof of payment, so this page still only shows what <em>our
+        backend</em> says. And in the redirect-only flow <em>nothing ever
+        updates the backend</em> — the status below sits at pending forever,
+        even after you pay. Not a bug: it's the limitation the
         <a href="store.html?case=webhook">webhook</a> and
         <a href="store.html?case=polling">polling</a> cases solve.`,
       webhook: `<strong>Case 2 — webhook.</strong> This page polls
@@ -85,10 +101,18 @@
       }
       const o = await res.json();
 
-      $("#case-copy").innerHTML = COPY[o.case] || "";
+      let copy = COPY[o.case] || "";
+      if (cameBack) {
+        copy = `<strong>Welcome back from checkout.</strong> The URL says
+          <code>status=paid</code>, but that's just a query parameter — the
+          status below is confirmed with our backend before we believe it.
+          ` + copy;
+      }
+      $("#case-copy").innerHTML = copy;
       $("#o-item").textContent = o.item_name;
       $("#o-amount").textContent = formatRupiah(o.amount);
       $("#o-id").textContent = o.id;
+      $("#o-mref").textContent = o.merchant_ref || o.id;
       $("#o-payreq").textContent = o.payment_request_id;
       const st = $("#o-status");
       st.textContent = o.status;
