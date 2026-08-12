@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kasera Threads · Kasera Pay demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a class="brand" href="index.html">Kasera Pay demo</a>
+      <a href="nonapi.html">0 · No code</a>
+      <a href="store.html?case=redirect">1 · Redirect</a>
+      <a href="store.html?case=webhook">2 · Webhook</a>
+      <a href="store.html?case=polling">3 · Polling</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Kasera Threads</h1>
+    <div class="note" id="case-copy"></div>
+    <div class="grid" id="items"></div>
+  </main>
+
+  <footer>
+    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+  </footer>
+
+  <script src="store.js"></script>
+  <script>
+    // Which integration flow is this page demonstrating? Same shop, same
+    // buttons — the ?case= parameter only changes what the backend and the
+    // order page do after checkout.
+    const CASE = new URLSearchParams(location.search).get("case") || "redirect";
+
+    const COPY = {
+      redirect: `<strong>Case 1 — redirect only.</strong> When you click
+        <em>Beli</em>, our backend creates a payment request with its API key
+        (the browser never sees the key, nor sets the price) and you are
+        redirected straight to Kasera's checkout. That's the entire
+        integration — but note the catch: after you pay, <em>this shop has no
+        idea</em>. Nothing tells it. Cases 2 and 3 exist to fix exactly that.`,
+      webhook: `<strong>Case 2 — webhook.</strong> Same purchase, but our
+        backend has registered a webhook URL with Kasera. The moment you pay,
+        Kasera POSTs a signed <code>payment.paid</code> event to our server,
+        which verifies the HMAC signature and marks the order paid. The order
+        page you'll land on polls <em>our own backend only</em> — never
+        Kasera — and flips to paid when the webhook arrives.`,
+      polling: `<strong>Case 3 — polling.</strong> Same purchase, but no
+        webhook: each time the order page asks our backend for status, the
+        backend asks Kasera <code>GET /v1/payment-requests/:id</code> — "paid
+        yet?" — and passes the answer on. Chattier than a webhook, but it
+        needs no public URL, which makes it perfect for local development.`,
+    };
+    document.getElementById("case-copy").innerHTML = COPY[CASE] || COPY.redirect;
+
+    // Render the catalog. Prices shown here are labels; the server has the
+    // real table (see main.go — never trust the client with an amount).
+    const grid = document.getElementById("items");
+    for (const it of ITEMS) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="name"></div>
+        <div class="price">${formatRupiah(it.price)}</div>
+        <button>Beli</button>`;
+      card.querySelector(".name").textContent = it.name;
+      card.querySelector("button").addEventListener("click", (e) => buy(it.id, e.target));
+      grid.appendChild(card);
+    }
+
+    // Buy: tell OUR backend what we want and which flow we're demoing. It
+    // answers with an order that already carries Kasera's checkout_url.
+    async function buy(itemId, btn) {
+      btn.disabled = true;
+      btn.textContent = "Creating order…";
+      try {
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ item_id: itemId, case: CASE }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || res.status);
+
+        if (CASE === "redirect") {
+          // Case 1: straight to checkout, nothing else. (This is also why
+          // the shop never learns about the payment.)
+          location.href = data.checkout_url;
+        } else {
+          // Cases 2 & 3: go to OUR order page, which offers the checkout
+          // link and watches the status live.
+          location.href = "order.html?id=" + encodeURIComponent(data.id);
+        }
+      } catch (err) {
+        alert("Could not create the order: " + err.message);
+        btn.disabled = false;
+        btn.textContent = "Beli";
+      }
+    }
+  </script>
+</body>
+</html>

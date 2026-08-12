@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order status · Kasera Pay demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a class="brand" href="index.html">Kasera Pay demo</a>
+      <a href="nonapi.html">0 · No code</a>
+      <a href="store.html?case=redirect">1 · Redirect</a>
+      <a href="store.html?case=webhook">2 · Webhook</a>
+      <a href="store.html?case=polling">3 · Polling</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Your order</h1>
+    <div class="note" id="case-copy">Loading…</div>
+
+    <dl class="order" id="order" hidden>
+      <dt>Item</dt><dd id="o-item"></dd>
+      <dt>Amount</dt><dd id="o-amount"></dd>
+      <dt>Order ID</dt><dd><code id="o-id"></code></dd>
+      <dt>Kasera payment request</dt><dd><code id="o-payreq"></code></dd>
+      <dt>Status</dt><dd><span class="status" id="o-status"></span></dd>
+    </dl>
+
+    <p id="pay-line" hidden>
+      <a id="pay-link" href="#" target="_blank" rel="noopener">
+        <button>Pay now — opens Kasera checkout</button>
+      </a>
+      <br><span class="muted">Pay in the other tab, then watch this page —
+      the status below updates on its own.</span>
+    </p>
+
+    <p id="gone" class="muted" hidden>
+      Order not found. Orders live in the demo backend's memory and vanish
+      when it restarts — go back to the <a href="store.html?case=webhook">store</a>
+      and make a new one.
+    </p>
+  </main>
+
+  <footer>
+    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+  </footer>
+
+  <script src="store.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+
+    // What this page's polling actually MEANS differs per case, and the demo
+    // is honest about it:
+    const COPY = {
+      redirect: `<strong>Case 1 — redirect.</strong> This page polls our
+        backend, but in the redirect-only flow <em>nothing ever updates the
+        backend</em> — the status below will sit at pending forever, even
+        after you pay. Not a bug: it's the limitation the
+        <a href="store.html?case=webhook">webhook</a> and
+        <a href="store.html?case=polling">polling</a> cases solve.`,
+      webhook: `<strong>Case 2 — webhook.</strong> This page polls
+        <em>our backend only</em>; the browser never talks to Kasera. The
+        backend, in turn, does nothing either — it waits for Kasera's signed
+        <code>payment.paid</code> webhook. When that lands (and its HMAC
+        signature checks out), the status flips to paid.
+        <span class="muted">Local dev note: Kasera requires a public https
+        webhook URL, so use a tunnel (ngrok etc.) — see the README.</span>`,
+      polling: `<strong>Case 3 — polling.</strong> Every refresh you see here
+        is our backend asking Kasera
+        <code>GET /v1/payment-requests/:id</code> and relaying the answer.
+        No webhook, no public URL — just questions.`,
+    };
+
+    const $ = (s) => document.querySelector(s);
+
+    async function refresh() {
+      const res = await fetch("/api/orders/" + encodeURIComponent(id));
+      if (!res.ok) {
+        $("#gone").hidden = false;
+        $("#case-copy").textContent = "";
+        return; // stop polling — the order is not coming back
+      }
+      const o = await res.json();
+
+      $("#case-copy").innerHTML = COPY[o.case] || "";
+      $("#o-item").textContent = o.item_name;
+      $("#o-amount").textContent = formatRupiah(o.amount);
+      $("#o-id").textContent = o.id;
+      $("#o-payreq").textContent = o.payment_request_id;
+      const st = $("#o-status");
+      st.textContent = o.status;
+      st.className = "status " + o.status;
+      $("#order").hidden = false;
+
+      // Offer the checkout link while there is still something to pay.
+      $("#pay-line").hidden = o.status !== "pending";
+      $("#pay-link").href = o.checkout_url;
+
+      // Keep watching until the order settles.
+      if (o.status === "pending") setTimeout(refresh, 2500);
+    }
+
+    if (id) refresh(); else $("#gone").hidden = false;
+  </script>
+</body>
+</html>

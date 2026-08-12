@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kasera Pay demo — four ways to get paid</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a class="brand" href="index.html">Kasera Pay demo</a>
+      <a href="nonapi.html">0 · No code</a>
+      <a href="store.html?case=redirect">1 · Redirect</a>
+      <a href="store.html?case=webhook">2 · Webhook</a>
+      <a href="store.html?case=polling">3 · Polling</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Four ways to accept payments with Kasera Pay</h1>
+    <p>
+      Kasera Pay lets Indonesian merchants accept QRIS payments through a
+      hosted checkout page: you create a <em>payment request</em>, Kasera
+      gives you a link, the buyer scans and pays, and you get told (or you
+      ask) when the money has arrived. This demo is a tiny clothing shop,
+      <strong>Kasera Threads</strong>, built four times — once for each way
+      of integrating, from "no code at all" to a full webhook flow.
+    </p>
+
+    <div class="cases">
+      <a href="nonapi.html">
+        <div class="k">CASE 0</div>
+        <div><strong>No API at all</strong></div>
+        <p class="muted">Create payment links from the dashboard and share
+        them. Zero code.</p>
+      </a>
+      <a href="store.html?case=redirect">
+        <div class="k">CASE 1</div>
+        <div><strong>Redirect only</strong></div>
+        <p class="muted">Create a payment request from your backend, send the
+        buyer to checkout. Simplest possible API use.</p>
+      </a>
+      <a href="store.html?case=webhook">
+        <div class="k">CASE 2</div>
+        <div><strong>Webhook</strong></div>
+        <p class="muted">Kasera calls your server the moment payment lands —
+        signed, verified, at-least-once. The production way.</p>
+      </a>
+      <a href="store.html?case=polling">
+        <div class="k">CASE 3</div>
+        <div><strong>Polling</strong></div>
+        <p class="muted">Your server asks Kasera "paid yet?" until it is. No
+        public URL needed — good for local dev.</p>
+      </a>
+    </div>
+
+    <h2>How this demo is built</h2>
+    <p class="muted">
+      One Go file (<code>main.go</code>, stdlib only) plus these static
+      pages. No framework, no build step — read the source top to bottom and
+      you have read the whole integration.
+    </p>
+  </main>
+
+  <footer>
+    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+  </footer>
+
+  <script src="store.js"></script>
+</body>
+</html>

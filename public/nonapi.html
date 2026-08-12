@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Case 0 — no code at all · Kasera Pay demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a class="brand" href="index.html">Kasera Pay demo</a>
+      <a href="nonapi.html">0 · No code</a>
+      <a href="store.html?case=redirect">1 · Redirect</a>
+      <a href="store.html?case=webhook">2 · Webhook</a>
+      <a href="store.html?case=polling">3 · Polling</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Case 0 — you don't need any code for this</h1>
+
+    <p>
+      Before writing a single line of integration code, know that the whole
+      loop already works from the dashboard:
+    </p>
+
+    <ol>
+      <li>Open the <strong>Kasera Pay dashboard</strong> and create a payment
+        request: amount, description, done.</li>
+      <li>The dashboard gives you a <strong>checkout link</strong> and a
+        <strong>QRIS code</strong>.</li>
+      <li>Share the link over WhatsApp, paste it in an invoice, or print the
+        QR and tape it to the counter.</li>
+      <li>The buyer pays; the dashboard shows the request flip to
+        <span class="status paid">paid</span>, and you can get notified.</li>
+    </ol>
+
+    <div class="note">
+      <strong>Try it live:</strong> a shared payment link looks like
+      <code>https://pay.kasera.id/p/&lt;token&gt;</code> — for a local dev
+      stack, <code>http://localhost:8888/p/&lt;token&gt;</code>.
+      <em>(Placeholder: create one in your dashboard and paste it here.)</em>
+    </div>
+
+    <p>
+      This is the right "integration" for a warung, a bake sale, or anyone
+      whose order volume fits in their head. The API cases (1–3) exist for
+      when you want <em>your own website</em> to create these links and react
+      to payment automatically — which is exactly what the rest of this demo
+      shows.
+    </p>
+
+    <p><a href="store.html?case=redirect">Next: Case 1, the simplest API integration →</a></p>
+  </main>
+
+  <footer>
+    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+  </footer>
+
+  <script src="store.js"></script>
+</body>
+</html>
