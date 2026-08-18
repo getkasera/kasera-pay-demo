@@ -135,6 +135,16 @@ code, pre { background: var(--code-bg); border-radius: 3px; font-size: .9em; }
 code { padding: .1em .35em; }
 pre { padding: .75rem 1rem; overflow-x: auto; }
 
+/* Sequence diagrams (diagram.js). Before mermaid renders — or if its CDN
+   never loads — this is a plain <pre> showing the diagram source, which is
+   exactly the fallback we want. */
+pre.mermaid {
+  background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+  padding: 1rem; margin: 1rem 0;
+}
+pre.mermaid[data-processed] { text-align: center; } /* center the SVG, not fallback text */
+pre.mermaid svg { max-width: 100%; height: auto; }
+
 /* Case tabs on the landing page */
 .cases { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); margin-top: 1rem; }
 .cases a {

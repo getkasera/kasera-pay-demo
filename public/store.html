@@ -27,6 +27,60 @@
   <main>
     <h1>Kasera Threads</h1>
     <div class="note" id="case-copy"></div>
+
+    <!-- Who talks to whom, per case — one sequence diagram each; the inline
+         script below keeps only the one matching ?case=. diagram.js renders
+         them with mermaid from a pinned CDN; if that CDN is unreachable,
+         this readable source is exactly what you see instead. The flows
+         mirror main.go — read it to check them. -->
+    <pre class="mermaid" data-case="redirect">
+sequenceDiagram
+    actor B as Buyer
+    participant S as Shop backend
+    participant K as Kasera
+    B->>S: click Beli - POST /api/orders {item_id, case}
+    Note over S: price looked up server-side, never taken from the client
+    S->>K: POST /v1/payment-requests (Idempotency-Key: order id)
+    K-->>S: payreq id + checkout_url
+    S-->>B: checkout_url
+    B->>K: redirected to hosted checkout - pays QRIS
+    K-->>B: return_url back to the order page (?status=paid)
+    Note over B,K: a query param proves nothing - the shop backend never learns of the payment (cases 2 and 3 fix this)
+    </pre>
+    <pre class="mermaid" data-case="webhook">
+sequenceDiagram
+    actor B as Buyer
+    participant S as Shop backend
+    participant K as Kasera
+    B->>S: click Beli - POST /api/orders {item_id, case}
+    S->>K: POST /v1/payment-requests (Idempotency-Key: order id)
+    K-->>S: payreq id + checkout_url
+    S-->>B: order page + checkout link
+    B->>K: pays QRIS on hosted checkout
+    K->>S: POST /webhook - signed payment.paid event
+    S->>S: verify HMAC signature (constant-time) - mark order paid
+    S-->>K: 200 OK (non-2xx would make Kasera retry)
+    B->>S: order page polls GET /api/orders/:id (our backend only, never Kasera)
+    S-->>B: status: paid
+    </pre>
+    <pre class="mermaid" data-case="polling">
+sequenceDiagram
+    actor B as Buyer
+    participant S as Shop backend
+    participant K as Kasera
+    B->>S: click Beli - POST /api/orders {item_id, case}
+    S->>K: POST /v1/payment-requests (Idempotency-Key: order id)
+    K-->>S: payreq id + checkout_url
+    S-->>B: order page + checkout link
+    B->>K: pays QRIS on hosted checkout
+    loop while pending - each time the order page checks in
+        B->>S: GET /api/orders/:id
+        S->>K: GET /v1/payment-requests/:id - paid yet?
+        K-->>S: status (pending, then paid)
+        S-->>B: status
+    end
+    </pre>
+
     <div class="grid" id="items"></div>
   </main>
 
@@ -45,6 +99,12 @@
     // buttons — the ?case= parameter only changes what the backend and the
     // order page do after checkout.
     const CASE = new URLSearchParams(location.search).get("case") || "redirect";
+
+    // Keep only this case's sequence diagram (diagram.js, loaded below,
+    // renders whatever pre.mermaid is left in the DOM).
+    document.querySelectorAll("pre.mermaid[data-case]").forEach((p) => {
+      if (p.dataset.case !== CASE) p.remove();
+    });
 
     // Per-case explainer, in both languages (static strings live in
     // i18n.js; this copy is specific to this page).
@@ -152,5 +212,6 @@
       }
     }
   </script>
+  <script src="diagram.js"></script>
 </body>
 </html>

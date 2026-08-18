@@ -44,6 +44,22 @@
         menerima notifikasi.</li>
     </ol>
 
+    <!-- Who talks to whom — rendered by diagram.js with mermaid from a
+         pinned CDN; if that CDN is unreachable, this readable source is
+         exactly what you see instead. Note what is absent: a shop backend. -->
+    <pre class="mermaid">
+sequenceDiagram
+    actor M as Merchant
+    participant D as Kasera dashboard
+    actor B as Buyer
+    M->>D: create payment link (amount, description)
+    D-->>M: checkout link + QRIS code
+    M->>B: share it - WhatsApp, invoice, printed QR
+    B->>D: open checkout - pay QRIS
+    D-->>M: status flips to paid (+ notification)
+    Note over M,B: no shop backend anywhere in this flow
+    </pre>
+
     <div class="note" data-i18n="nonapi.note">
       <strong>Coba langsung:</strong> tautan pembayaran yang dibagikan
       berbentuk <code>https://pay.kasera.id/p/&lt;token&gt;</code> — untuk
@@ -73,5 +89,6 @@
 
   <script src="i18n.js"></script>
   <script src="store.js"></script>
+  <script src="diagram.js"></script>
 </body>
 </html>
