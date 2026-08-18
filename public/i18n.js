@@ -50,11 +50,11 @@ const I18N = {
     en: `Source code on GitHub →`,
   },
   "home.status": {
-    id: `<strong>Status pra-rilis:</strong> Kasera Pay saat ini berjalan di
-      <em>sandbox</em> DOKU — semua alur di sini berfungsi ujung ke ujung,
+    id: `<strong>Status pra-rilis:</strong> Kasera Pay saat ini berjalan dalam mode
+      <em>sandbox</em> pembayaran — semua alur di sini berfungsi ujung ke ujung,
       tetapi pembayaran belum bisa diselesaikan dengan uang sungguhan.`,
-    en: `<strong>Pre-launch status:</strong> Kasera Pay currently runs on
-      the DOKU <em>sandbox</em> — every flow here works end to end, but
+    en: `<strong>Pre-launch status:</strong> Kasera Pay currently runs in
+      payment-<em>sandbox</em> mode — every flow here works end to end, but
       payments cannot complete with real money yet.`,
   },
   "home.cases": { id: `Empat kasusnya`, en: `The four cases` },
