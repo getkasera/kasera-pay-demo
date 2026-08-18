@@ -84,6 +84,12 @@ var (
 	apiKey        = os.Getenv("KASERA_API_KEY")
 	apiBase       = envOr("KASERA_API_BASE", "http://localhost:8888")
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
+	// publicURL is this demo's own https origin (e.g. https://demo-pay.kasera.id).
+	// When set, orders carry a return_url so the checkout sends the buyer back
+	// to the order page after paying. Kasera only accepts https return URLs —
+	// a payment page never redirects somewhere unencrypted — so local plain-http
+	// runs leave this empty and the redirect-back simply doesn't happen there.
+	publicURL = os.Getenv("PUBLIC_URL")
 )
 
 // transaction is the slice of Kasera's response this demo cares about.
@@ -103,7 +109,7 @@ type transaction struct {
 // perfect key. (Only this header deduplicates; merchant_ref and external_id
 // are labels, stored and echoed, never a retry key.)
 func createTransaction(orderID string, it Item) (*transaction, error) {
-	body, _ := json.Marshal(map[string]any{
+	payload := map[string]any{
 		"amount":      it.Price, // from OUR table, never from the client
 		"description": "Kasera Threads — " + it.Name,
 		"external_id": orderID, // comes back in the webhook, links it to our order
@@ -118,14 +124,17 @@ func createTransaction(orderID string, it Item) (*transaction, error) {
 		"order_items": []map[string]any{
 			{"name": it.Name, "price": it.Price, "quantity": 1},
 		},
-		// return_url would bring the buyer back here after paying:
-		//   "return_url": "http://localhost:3300/order.html?order=" + orderID,
-		// but Kasera requires https (a payment page never redirects somewhere
-		// unencrypted, no dev exception), and this demo serves plain http —
-		// so it stays a comment. See README "Redirect-back". order.html
-		// already handles the ?order=&status=succeeded arrival for when you
-		// run this demo behind https (e.g. a tunnel).
-	})
+	}
+	// return_url brings the buyer back to the order page after paying —
+	// Kasera appends ?status=succeeded on arrival (display only; the order
+	// page never trusts it, see order.html). Kasera accepts https URLs only —
+	// a payment page never redirects somewhere unencrypted, no dev exception —
+	// so this rides on PUBLIC_URL being set (the deployed demo) and local
+	// plain-http runs simply skip the redirect-back.
+	if publicURL != "" {
+		payload["return_url"] = publicURL + "/order.html?order=" + orderID
+	}
+	body, _ := json.Marshal(payload)
 	req, err := http.NewRequest("POST", apiBase+"/v1/transactions", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
