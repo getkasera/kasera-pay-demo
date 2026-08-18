@@ -17,6 +17,10 @@ all* to a production-style webhook flow. It is deliberately minimal:
 | 2 | Webhook | Kasera POSTs a signed `payment.paid` event to `POST /webhook`; the backend verifies the HMAC signature and marks the order paid. The production way. |
 | 3 | Polling | The backend asks Kasera `GET /v1/payment-requests/:id` ("paid yet?") whenever the order page checks in. No public URL needed — great for local dev. |
 
+> **Status:** Kasera Pay is pre-launch — DOKU runs in sandbox, so demo
+> payments cannot complete with real money yet. Everything here works against
+> a local/staging stack today and goes live unchanged at launch.
+
 ## Run it locally (3 commands)
 
 You need Go 1.22+ and a Kasera Pay account with an API key
