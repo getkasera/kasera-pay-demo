@@ -31,8 +31,10 @@
     <!-- Who talks to whom, per case — one sequence diagram each; the inline
          script below keeps only the one matching ?case=. diagram.js renders
          them with mermaid from a pinned CDN; if that CDN is unreachable,
-         this readable source is exactly what you see instead. The flows
-         mirror main.go — read it to check them. -->
+         this readable source is what you see instead, in the current
+         language. Each <pre> holds the English source; the <template>
+         right after it holds the Indonesian one — diagram.js picks by
+         lang(). The flows mirror main.go — read it to check them. -->
     <pre class="mermaid" data-case="redirect">
 sequenceDiagram
     actor B as Buyer
@@ -47,6 +49,20 @@ sequenceDiagram
     K-->>B: return_url back to the order page (?status=succeeded)
     Note over B,K: a query param proves nothing - the shop backend never learns of the payment (cases 2 and 3 fix this)
     </pre>
+    <template class="mermaid-id">
+sequenceDiagram
+    actor B as Pembeli
+    participant S as Backend toko
+    participant K as Kasera
+    B->>S: klik Beli - POST /api/orders {item_id, case}
+    Note over S: harga dicari di sisi server, tidak pernah diambil dari klien
+    S->>K: POST /v1/transactions (Idempotency-Key: id pesanan)
+    K-->>S: id payreq + checkout_url
+    S-->>B: checkout_url
+    B->>K: diarahkan ke hosted checkout - bayar QRIS
+    K-->>B: return_url kembali ke halaman pesanan (?status=succeeded)
+    Note over B,K: query param tidak membuktikan apa pun - backend toko tidak pernah tahu soal pembayarannya (case 2 dan 3 membereskan ini)
+    </template>
     <pre class="mermaid" data-case="webhook">
 sequenceDiagram
     actor B as Buyer
@@ -63,6 +79,22 @@ sequenceDiagram
     B->>S: order page polls GET /api/orders/:id (our backend only, never Kasera)
     S-->>B: status: paid
     </pre>
+    <template class="mermaid-id">
+sequenceDiagram
+    actor B as Pembeli
+    participant S as Backend toko
+    participant K as Kasera
+    B->>S: klik Beli - POST /api/orders {item_id, case}
+    S->>K: POST /v1/transactions (Idempotency-Key: id pesanan)
+    K-->>S: id payreq + checkout_url
+    S-->>B: halaman pesanan + tautan checkout
+    B->>K: bayar QRIS di hosted checkout
+    K->>S: POST /webhook - event payment.paid bertanda tangan
+    S->>S: verifikasi tanda tangan HMAC (constant-time) - tandai pesanan paid
+    S-->>K: 200 OK (selain 2xx membuat Kasera mengulang kirim)
+    B->>S: halaman pesanan mem-polling GET /api/orders/:id (backend kami saja, tidak pernah ke Kasera)
+    S-->>B: status: paid
+    </template>
     <pre class="mermaid" data-case="polling">
 sequenceDiagram
     actor B as Buyer
@@ -80,6 +112,23 @@ sequenceDiagram
         S-->>B: status
     end
     </pre>
+    <template class="mermaid-id">
+sequenceDiagram
+    actor B as Pembeli
+    participant S as Backend toko
+    participant K as Kasera
+    B->>S: klik Beli - POST /api/orders {item_id, case}
+    S->>K: POST /v1/transactions (Idempotency-Key: id pesanan)
+    K-->>S: id payreq + checkout_url
+    S-->>B: halaman pesanan + tautan checkout
+    B->>K: bayar QRIS di hosted checkout
+    loop selama pending - tiap kali halaman pesanan mengecek
+        B->>S: GET /api/orders/:id
+        S->>K: GET /v1/transactions/:id - sudah dibayar?
+        K-->>S: status (pending, lalu succeeded)
+        S-->>B: status
+    end
+    </template>
 
     <div class="grid" id="items"></div>
   </main>
@@ -103,7 +152,10 @@ sequenceDiagram
     // Keep only this case's sequence diagram (diagram.js, loaded below,
     // renders whatever pre.mermaid is left in the DOM).
     document.querySelectorAll("pre.mermaid[data-case]").forEach((p) => {
-      if (p.dataset.case !== CASE) p.remove();
+      if (p.dataset.case !== CASE) {
+        p.nextElementSibling?.remove(); // its Indonesian <template> twin
+        p.remove();
+      }
     });
 
     // Per-case explainer, in both languages (static strings live in

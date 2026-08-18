@@ -46,7 +46,9 @@
 
     <!-- Who talks to whom — rendered by diagram.js with mermaid from a
          pinned CDN; if that CDN is unreachable, this readable source is
-         exactly what you see instead. Note what is absent: a shop backend. -->
+         what you see instead, in the current language. The <pre> holds the
+         English source; the <template> after it holds the Indonesian one.
+         Note what is absent: a shop backend. -->
     <pre class="mermaid">
 sequenceDiagram
     actor M as Merchant
@@ -59,6 +61,18 @@ sequenceDiagram
     D-->>M: status flips to paid (+ notification)
     Note over M,B: no shop backend anywhere in this flow
     </pre>
+    <template class="mermaid-id">
+sequenceDiagram
+    actor M as Pedagang
+    participant D as Dashboard Kasera
+    actor B as Pembeli
+    M->>D: buat tautan pembayaran (jumlah, deskripsi)
+    D-->>M: tautan checkout + kode QRIS
+    M->>B: bagikan - WhatsApp, invoice, QR cetak
+    B->>D: buka checkout - bayar QRIS
+    D-->>M: status berubah jadi paid (+ notifikasi)
+    Note over M,B: tidak ada backend toko sama sekali di alur ini
+    </template>
 
     <div class="note" data-i18n="nonapi.note">
       <strong>Coba langsung:</strong> tautan pembayaran yang dibagikan
