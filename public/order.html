@@ -66,17 +66,17 @@
   <script>
     // Two ways to arrive here: our own store links use ?id=..., Kasera's
     // checkout redirect-back uses the return_url we gave it, which carries
-    // ?order=... (plus Kasera's own ?id=payreq_...&status=paid).
+    // ?order=... (plus Kasera's own ?id=payreq_...&status=succeeded).
     const params = new URLSearchParams(location.search);
     const id = params.get("order") || params.get("id");
 
-    // NEVER trust ?status=paid. It is a query parameter — anyone can type
+    // NEVER trust ?status=succeeded. It is a query parameter — anyone can type
     // it into the address bar; it proves nothing about money moving. It is
     // only a hint that we arrived via the checkout's redirect-back. The
     // status rendered below always comes from GET /api/orders/:id — our
     // backend, which learned about payment through a channel a buyer cannot
     // forge (signed webhook, or asking Kasera directly).
-    const cameBack = params.get("status") === "paid";
+    const cameBack = params.get("status") === "succeeded";
 
     // What this page's polling actually MEANS differs per case, and the
     // demo is honest about it. Both languages; static strings are in
@@ -85,7 +85,7 @@
       id: {
         redirect: `<strong>Case 1 — redirect.</strong> Checkout Kasera kini
           bisa mengirim pembeli kembali ke sini (<code>return_url</code>,
-          dengan <code>?status=paid</code> ditambahkan) — tapi parameter
+          dengan <code>?status=succeeded</code> ditambahkan) — tapi parameter
           query bukan bukti pembayaran, jadi halaman ini tetap hanya
           menampilkan apa kata <em>backend kami</em>. Dan pada alur
           redirect-saja <em>tidak ada yang pernah memperbarui backend</em> —
@@ -104,17 +104,17 @@
           README.</span>`,
         polling: `<strong>Case 3 — polling.</strong> Setiap pembaruan yang
           Anda lihat di sini adalah backend kami bertanya ke Kasera
-          <code>GET /v1/payment-requests/:id</code> lalu meneruskan
+          <code>GET /v1/transactions/:id</code> lalu meneruskan
           jawabannya. Tanpa webhook, tanpa URL publik — cuma bertanya.`,
         cameBack: `<strong>Selamat datang kembali dari checkout.</strong>
-          URL-nya bilang <code>status=paid</code>, tapi itu cuma parameter
+          URL-nya bilang <code>status=succeeded</code>, tapi itu cuma parameter
           query — status di bawah dikonfirmasi dulu ke backend kami sebelum
           kami percaya. `,
       },
       en: {
         redirect: `<strong>Case 1 — redirect.</strong> Kasera's checkout can
           now send the buyer back here (<code>return_url</code>, with
-          <code>?status=paid</code> appended) — but a query parameter is not
+          <code>?status=succeeded</code> appended) — but a query parameter is not
           proof of payment, so this page still only shows what <em>our
           backend</em> says. And in the redirect-only flow <em>nothing ever
           updates the backend</em> — the status below sits at pending forever,
@@ -130,10 +130,10 @@
           webhook URL, so use a tunnel (ngrok etc.) — see the README.</span>`,
         polling: `<strong>Case 3 — polling.</strong> Every refresh you see here
           is our backend asking Kasera
-          <code>GET /v1/payment-requests/:id</code> and relaying the answer.
+          <code>GET /v1/transactions/:id</code> and relaying the answer.
           No webhook, no public URL — just questions.`,
         cameBack: `<strong>Welcome back from checkout.</strong> The URL says
-          <code>status=paid</code>, but that's just a query parameter — the
+          <code>status=succeeded</code>, but that's just a query parameter — the
           status below is confirmed with our backend before we believe it. `,
       },
     };

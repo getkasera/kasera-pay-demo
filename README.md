@@ -13,9 +13,9 @@ all* to a production-style webhook flow. It is deliberately minimal:
 | # | Case | How the shop learns about payment |
 |---|------|-----------------------------------|
 | 0 | [No code](public/nonapi.html) | It doesn't need to — you create payment links in the dashboard and share them (WhatsApp, invoice, printed QRIS). |
-| 1 | Redirect only | It doesn't (on purpose). Backend creates a payment request, buyer is redirected to checkout — and after paying, Kasera's `return_url` can send them back to `order.html?status=paid`. But a query param proves nothing: the shop backend still never learns about the payment. Shows *why* cases 2 and 3 exist. |
+| 1 | Redirect only | It doesn't (on purpose). Backend creates a payment request, buyer is redirected to checkout — and after paying, Kasera's `return_url` can send them back to `order.html?status=succeeded`. But a query param proves nothing: the shop backend still never learns about the payment. Shows *why* cases 2 and 3 exist. |
 | 2 | Webhook | Kasera POSTs a signed `payment.paid` event to `POST /webhook`; the backend verifies the HMAC signature and marks the order paid. The production way. |
-| 3 | Polling | The backend asks Kasera `GET /v1/payment-requests/:id` ("paid yet?") whenever the order page checks in. No public URL needed — great for local dev. |
+| 3 | Polling | The backend asks Kasera `GET /v1/transactions/:id` ("paid yet?" — the API answers `succeeded`) whenever the order page checks in. No public URL needed — great for local dev. |
 
 > **Status:** Kasera Pay is pre-launch — DOKU runs in sandbox, so demo
 > payments cannot complete with real money yet. Everything here works against
@@ -71,9 +71,9 @@ What was verified, exactly:
    buyer paying: it calls the product's own dev-mode simulator
    (`POST /api/v1/checkout/<token>/simulate-payment`, the same endpoint the
    checkout page's simulate button uses, which runs the real
-   pending→paid transition including the webhook outbox row), then delivers
-   the signed `payment.paid` webhook to this demo itself, since the product's
-   dispatcher can't (see 2).
+   pending→succeeded transition including the webhook outbox row), then
+   delivers the signed `payment.paid` webhook to this demo itself, since the
+   product's dispatcher can't (see 2).
 
 Verified end-to-end, one order each:
 
@@ -81,12 +81,15 @@ Verified end-to-end, one order each:
 |------|--------|
 | 1 Redirect | ✅ order created, `checkout_url` serves the hosted checkout page (now rendering the `order_items` line we send); after simulate-paid the checkout page shows **paid**. Caveat: "back to the store" (`return_url`) shipped in the product, but it accepts **https only** — no dev exception — and this demo serves plain http, so locally it stays a manual browser-back. See "Redirect-back" below. |
 | 2 Webhook | ✅ simulate-paid delivered the signed event; the demo verified the HMAC and flipped the order to **paid** (no polling involved — case≠polling never refreshes from Kasera, so the webhook path alone did it). |
-| 3 Polling | ✅ with the webhook send skipped (`WEBHOOK_SECRET= scripts/simulate-paid.sh ...`), `GET /api/orders/{id}` refreshed from `GET /v1/payment-requests/:id` and returned **paid**. |
+| 3 Polling | ✅ with the webhook send skipped (`WEBHOOK_SECRET= scripts/simulate-paid.sh ...`), `GET /api/orders/{id}` refreshed from `GET /v1/transactions/:id` (Kasera says `succeeded`) and returned **paid**. |
 | 0 No code | n/a — lives entirely in the Kasera dashboard, nothing to wire. |
 
 ## What the demo sends Kasera (KAS-2203 fields)
 
-Order creation now uses the enriched payment-request body:
+Order creation uses the enriched `POST /v1/transactions` body (the API
+renamed its routes from `/v1/payment-requests` to `/v1/transactions` —
+KAS-2285 merged payins and payouts into one resource — but ids keep their
+`payreq_` prefix and the webhook keeps its `payment.paid` name):
 
 ```json
 {
@@ -103,8 +106,8 @@ Order creation now uses the enriched payment-request body:
 
 - **`merchant_ref`** — our order ID, echoed back in every response (shown on
   the order page so refs line up between our logs and Kasera's dashboard).
-  It also doubles as the idempotency scope when no `Idempotency-Key` header
-  is sent — this demo sends the header, so it's purely a reference here.
+  A label only: it is stored, echoed and filterable, and never deduplicates
+  anything — only the `Idempotency-Key` header does that.
 - **`order_items`** — rendered on the hosted checkout so the buyer sees the
   item line, not just an amount. Kasera rejects a list whose
   Σ price×quantity disagrees with `amount`; `amount` stays authoritative.
@@ -140,7 +143,7 @@ The full-fat body would also include:
 ```
 
 After payment the hosted checkout sends the buyer to
-`<return_url>?id=payreq_…&status=paid`. But Kasera validates `return_url`
+`<return_url>?id=payreq_…&status=succeeded`. But Kasera validates `return_url`
 as **https only** — a payment page never redirects somewhere unencrypted,
 and (verified against the validator) there is **no dev allowance for http
 localhost** — so this plain-http demo cannot send it and the field stays out
@@ -150,15 +153,15 @@ of `main.go`.
      (tunnel or real deploy), or if the product grows a dev allowance for
      http://localhost. order.html already handles the arrival. -->
 
-`order.html` handles the arrival anyway (`?order=…&status=paid`) — and
+`order.html` handles the arrival anyway (`?order=…&status=succeeded`) — and
 deliberately **never trusts the query param**: anyone can type
-`status=paid` into an address bar, so the page always confirms via
+`status=succeeded` into an address bar, so the page always confirms via
 `GET /api/orders/{id}` before showing PAID.
 
 ## Endpoints (all in `main.go`)
 
 ```
-POST /api/orders        {item_id, case}  -> create order + Kasera payment request
+POST /api/orders        {item_id, case}  -> create order + Kasera transaction
 GET  /api/orders/{id}                    -> order status (case=polling refreshes from Kasera)
 POST /webhook                            -> Kasera's signed payment.paid callback
 ```
@@ -178,9 +181,10 @@ POST /webhook                            -> Kasera's signed payment.paid callbac
   plain `==` would leak how much of a guessed signature was right. This is
   the one code path with its own test (`main_test.go`).
 - **Idempotency everywhere it matters.** Order creation sends an
-  `Idempotency-Key` (Kasera requires it — a retried request must not charge
-  twice), and the webhook handler is safely re-entrant because delivery is
-  at-least-once.
+  `Idempotency-Key` (optional on Kasera's API, but the best practice: a
+  retried request must not charge twice, and without the header every retry
+  is its own charge), and the webhook handler is safely re-entrant because
+  delivery is at-least-once.
 - **Secrets never land in git.** `.env` is gitignored; `.env.example` ships
   the shape with empty values.
 

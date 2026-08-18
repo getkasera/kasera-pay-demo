@@ -40,11 +40,11 @@ sequenceDiagram
     participant K as Kasera
     B->>S: click Beli - POST /api/orders {item_id, case}
     Note over S: price looked up server-side, never taken from the client
-    S->>K: POST /v1/payment-requests (Idempotency-Key: order id)
+    S->>K: POST /v1/transactions (Idempotency-Key: order id)
     K-->>S: payreq id + checkout_url
     S-->>B: checkout_url
     B->>K: redirected to hosted checkout - pays QRIS
-    K-->>B: return_url back to the order page (?status=paid)
+    K-->>B: return_url back to the order page (?status=succeeded)
     Note over B,K: a query param proves nothing - the shop backend never learns of the payment (cases 2 and 3 fix this)
     </pre>
     <pre class="mermaid" data-case="webhook">
@@ -53,7 +53,7 @@ sequenceDiagram
     participant S as Shop backend
     participant K as Kasera
     B->>S: click Beli - POST /api/orders {item_id, case}
-    S->>K: POST /v1/payment-requests (Idempotency-Key: order id)
+    S->>K: POST /v1/transactions (Idempotency-Key: order id)
     K-->>S: payreq id + checkout_url
     S-->>B: order page + checkout link
     B->>K: pays QRIS on hosted checkout
@@ -69,14 +69,14 @@ sequenceDiagram
     participant S as Shop backend
     participant K as Kasera
     B->>S: click Beli - POST /api/orders {item_id, case}
-    S->>K: POST /v1/payment-requests (Idempotency-Key: order id)
+    S->>K: POST /v1/transactions (Idempotency-Key: order id)
     K-->>S: payreq id + checkout_url
     S-->>B: order page + checkout link
     B->>K: pays QRIS on hosted checkout
     loop while pending - each time the order page checks in
         B->>S: GET /api/orders/:id
-        S->>K: GET /v1/payment-requests/:id - paid yet?
-        K-->>S: status (pending, then paid)
+        S->>K: GET /v1/transactions/:id - paid yet?
+        K-->>S: status (pending, then succeeded)
         S-->>B: status
     end
     </pre>
@@ -129,7 +129,7 @@ sequenceDiagram
         polling: `<strong>Case 3 — polling.</strong> Pembelian yang sama,
           tanpa webhook: tiap kali halaman pesanan menanyakan status ke
           backend kami, backend bertanya ke Kasera
-          <code>GET /v1/payment-requests/:id</code> — "sudah dibayar?" — dan
+          <code>GET /v1/transactions/:id</code> — "sudah dibayar?" — dan
           meneruskan jawabannya. Lebih cerewet daripada webhook, tapi tidak
           butuh URL publik, jadi pas sekali untuk pengembangan lokal.`,
       },
@@ -150,7 +150,7 @@ sequenceDiagram
           Kasera — and flips to paid when the webhook arrives.`,
         polling: `<strong>Case 3 — polling.</strong> Same purchase, but no
           webhook: each time the order page asks our backend for status, the
-          backend asks Kasera <code>GET /v1/payment-requests/:id</code> — "paid
+          backend asks Kasera <code>GET /v1/transactions/:id</code> — "paid
           yet?" — and passes the answer on. Chattier than a webhook, but it
           needs no public URL, which makes it perfect for local development.`,
       },

@@ -2,7 +2,7 @@
 //
 // It serves the static pages in ./public and exposes three endpoints:
 //
-//	POST /api/orders      create an order + a Kasera payment request
+//	POST /api/orders      create an order + a Kasera transaction
 //	GET  /api/orders/{id} read an order's status (polling case refreshes from Kasera)
 //	POST /webhook         receive Kasera's signed payment.paid callback
 //
@@ -54,11 +54,15 @@ var items = map[string]Item{
 // ---------------------------------------------------------------------------
 
 type Order struct {
-	ID               string `json:"id"`
-	ItemID           string `json:"item_id"`
-	ItemName         string `json:"item_name"`
-	Amount           int64  `json:"amount"`
-	Case             string `json:"case"` // redirect | webhook | polling
+	ID       string `json:"id"`
+	ItemID   string `json:"item_id"`
+	ItemName string `json:"item_name"`
+	Amount   int64  `json:"amount"`
+	Case     string `json:"case"` // redirect | webhook | polling
+	// Kasera's id for the transaction. Still payreq_-prefixed and still named
+	// payment_request_id in the webhook payload: the API renamed its routes to
+	// /v1/transactions, but ids already written into integrators' databases —
+	// and the field names that carry them — kept their old spelling.
 	PaymentRequestID string `json:"payment_request_id"`
 	MerchantRef      string `json:"merchant_ref"` // our ref, echoed back by Kasera
 	CheckoutURL      string `json:"checkout_url"`
@@ -82,26 +86,29 @@ var (
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
 )
 
-// paymentRequest is the slice of Kasera's response this demo cares about.
-// (The real response has more fields: fee, net, payer, timestamps.)
-type paymentRequest struct {
-	ID          string `json:"id"`     // "payreq_<uuid>"
-	Status      string `json:"status"` // pending | paid | expired | canceled
+// transaction is the slice of Kasera's response this demo cares about.
+// (The real response has more fields: fee, net, qris_string, timestamps.)
+type transaction struct {
+	ID          string `json:"id"`     // "payreq_<uuid>" — prefix predates the rename, kept forever
+	Status      string `json:"status"` // pending | succeeded | failed | expired | canceled
 	CheckoutURL string `json:"checkout_url"`
 	MerchantRef string `json:"merchant_ref"` // our order ID, echoed back
 }
 
-// createPaymentRequest asks Kasera for a hosted checkout page.
-// The Idempotency-Key header is mandatory on this API: if our request times
-// out and we retry with the same key, Kasera returns the original payment
-// request instead of charging the buyer twice. Our order ID is a perfect key.
-func createPaymentRequest(orderID string, it Item) (*paymentRequest, error) {
+// createTransaction asks Kasera for a hosted checkout page.
+// The Idempotency-Key header is OPTIONAL — but sending it is the best
+// practice this demo teaches: if our request times out and we retry with the
+// same key, Kasera returns the original transaction instead of charging the
+// buyer twice. Skip it and every retry is its own charge. Our order ID is a
+// perfect key. (Only this header deduplicates; merchant_ref and external_id
+// are labels, stored and echoed, never a retry key.)
+func createTransaction(orderID string, it Item) (*transaction, error) {
 	body, _ := json.Marshal(map[string]any{
 		"amount":      it.Price, // from OUR table, never from the client
 		"description": "Kasera Threads — " + it.Name,
 		"external_id": orderID, // comes back in the webhook, links it to our order
-		// merchant_ref is our own reference, echoed back in every response —
-		// and it doubles as the idempotency scope if you skip the header.
+		// merchant_ref is our own reference, echoed back in every response.
+		// A label only — it never deduplicates anything (see Idempotency-Key).
 		"merchant_ref": orderID,
 		// customer + order_items are display detail: the hosted checkout
 		// renders the item lines, and Kasera's dashboard shows who bought.
@@ -116,10 +123,10 @@ func createPaymentRequest(orderID string, it Item) (*paymentRequest, error) {
 		// but Kasera requires https (a payment page never redirects somewhere
 		// unencrypted, no dev exception), and this demo serves plain http —
 		// so it stays a comment. See README "Redirect-back". order.html
-		// already handles the ?order=&status=paid arrival for when you run
-		// this demo behind https (e.g. a tunnel).
+		// already handles the ?order=&status=succeeded arrival for when you
+		// run this demo behind https (e.g. a tunnel).
 	})
-	req, err := http.NewRequest("POST", apiBase+"/v1/payment-requests", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", apiBase+"/v1/transactions", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -129,10 +136,10 @@ func createPaymentRequest(orderID string, it Item) (*paymentRequest, error) {
 	return doKasera(req)
 }
 
-// getPaymentRequest reads the current state of a payment request — this is
-// the whole of the "polling" integration case.
-func getPaymentRequest(id string) (*paymentRequest, error) {
-	req, err := http.NewRequest("GET", apiBase+"/v1/payment-requests/"+id, nil)
+// getTransaction reads the current state of a transaction — this is the
+// whole of the "polling" integration case.
+func getTransaction(id string) (*transaction, error) {
+	req, err := http.NewRequest("GET", apiBase+"/v1/transactions/"+id, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +147,7 @@ func getPaymentRequest(id string) (*paymentRequest, error) {
 	return doKasera(req)
 }
 
-func doKasera(req *http.Request) (*paymentRequest, error) {
+func doKasera(req *http.Request) (*transaction, error) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -150,11 +157,11 @@ func doKasera(req *http.Request) (*paymentRequest, error) {
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		return nil, fmt.Errorf("kasera answered %d: %s", res.StatusCode, raw)
 	}
-	var pr paymentRequest
-	if err := json.Unmarshal(raw, &pr); err != nil {
+	var tx transaction
+	if err := json.Unmarshal(raw, &tx); err != nil {
 		return nil, err
 	}
-	return &pr, nil
+	return &tx, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -197,15 +204,15 @@ func handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		Case:     in.Case,
 		Status:   "pending",
 	}
-	pr, err := createPaymentRequest(o.ID, it)
+	tx, err := createTransaction(o.ID, it)
 	if err != nil {
-		log.Printf("create payment request: %v", err)
-		httpErr(w, 502, "could not create payment request with Kasera")
+		log.Printf("create transaction: %v", err)
+		httpErr(w, 502, "could not create transaction with Kasera")
 		return
 	}
-	o.PaymentRequestID = pr.ID
-	o.MerchantRef = pr.MerchantRef // echoed back by Kasera; equals o.ID
-	o.CheckoutURL = pr.CheckoutURL
+	o.PaymentRequestID = tx.ID
+	o.MerchantRef = tx.MerchantRef // echoed back by Kasera; equals o.ID
+	o.CheckoutURL = tx.CheckoutURL
 
 	mu.Lock()
 	orders[o.ID] = o
@@ -227,12 +234,14 @@ func handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if o.Case == "polling" && o.Status == "pending" {
-		if pr, err := getPaymentRequest(o.PaymentRequestID); err == nil {
+		if tx, err := getTransaction(o.PaymentRequestID); err == nil {
 			mu.Lock()
-			switch pr.Status {
-			case "paid":
+			// Kasera's vocabulary ("succeeded" — one word that reads right on
+			// payins and payouts alike) maps onto this shop's simpler one.
+			switch tx.Status {
+			case "succeeded":
 				o.Status = "paid"
-			case "expired", "canceled":
+			case "expired", "canceled", "failed":
 				o.Status = "expired"
 			}
 			mu.Unlock()
