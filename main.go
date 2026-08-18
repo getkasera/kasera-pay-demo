@@ -361,7 +361,14 @@ func main() {
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir("public")))
+	// no-cache means "revalidate before using", not "don't cache": the browser
+	// still gets 304s, but never runs yesterday's store.js under today's
+	// index.html — which is exactly how the theme button once shipped blank.
+	static := http.FileServer(http.Dir("public"))
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		static.ServeHTTP(w, r)
+	}))
 	mux.HandleFunc("POST /api/orders", handleCreateOrder)
 	mux.HandleFunc("GET /api/orders/{id}", handleGetOrder)
 	mux.HandleFunc("POST /webhook", handleWebhook)
