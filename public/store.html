@@ -1,19 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kasera Threads · Kasera Pay demo</title>
+  <title data-i18n="title.store">Kasera Threads · demo Kasera Pay</title>
+  <script>
+    // Theme before first paint — a saved choice wins, else follow the OS.
+    if ((localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches && "dark")) === "dark")
+      document.documentElement.dataset.theme = "dark";
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <nav>
       <a class="brand" href="index.html">Kasera Pay demo</a>
-      <a href="nonapi.html">0 · No code</a>
-      <a href="store.html?case=redirect">1 · Redirect</a>
-      <a href="store.html?case=webhook">2 · Webhook</a>
-      <a href="store.html?case=polling">3 · Polling</a>
+      <a href="nonapi.html" data-i18n="nav.case0">0 · Tanpa kode</a>
+      <a href="store.html?case=redirect" data-i18n="nav.case1">1 · Redirect</a>
+      <a href="store.html?case=webhook" data-i18n="nav.case2">2 · Webhook</a>
+      <a href="store.html?case=polling" data-i18n="nav.case3">3 · Polling</a>
+      <button id="lang-toggle" class="toggle" title="Bahasa / Language"></button>
+      <button id="theme-toggle" class="toggle" title="Tema / Theme"></button>
     </nav>
   </header>
 
@@ -24,9 +31,14 @@
   </main>
 
   <footer>
-    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+    <span data-i18n="footer.tag">Toko demo Kasera Pay</span> —
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/public/store.html"
+       data-i18n="footer.page">kode halaman ini</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go">main.go</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo" data-i18n="footer.repo">repo GitHub</a>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="store.js"></script>
   <script>
     // Which integration flow is this page demonstrating? Same shop, same
@@ -34,31 +46,65 @@
     // order page do after checkout.
     const CASE = new URLSearchParams(location.search).get("case") || "redirect";
 
+    // Per-case explainer, in both languages (static strings live in
+    // i18n.js; this copy is specific to this page).
     const COPY = {
-      redirect: `<strong>Case 1 — redirect only.</strong> When you click
-        <em>Beli</em>, our backend creates a payment request with its API key
-        (the browser never sees the key, nor sets the price) and you are
-        redirected straight to Kasera's checkout — which now renders the
-        <code>order_items</code> we send, so the buyer sees the actual item
-        line, not just an amount. That's the entire integration — but note
-        the catch: after you pay, <em>this shop has no idea</em>. Nothing
-        tells it. Cases 2 and 3 exist to fix exactly that.`,
-      webhook: `<strong>Case 2 — webhook.</strong> Same purchase, but our
-        backend has registered a webhook URL with Kasera. The moment you pay,
-        Kasera POSTs a signed <code>payment.paid</code> event to our server,
-        which verifies the HMAC signature and marks the order paid. The order
-        page you'll land on polls <em>our own backend only</em> — never
-        Kasera — and flips to paid when the webhook arrives.`,
-      polling: `<strong>Case 3 — polling.</strong> Same purchase, but no
-        webhook: each time the order page asks our backend for status, the
-        backend asks Kasera <code>GET /v1/payment-requests/:id</code> — "paid
-        yet?" — and passes the answer on. Chattier than a webhook, but it
-        needs no public URL, which makes it perfect for local development.`,
+      id: {
+        redirect: `<strong>Case 1 — redirect saja.</strong> Saat Anda
+          mengklik <em>Beli</em>, backend kami membuat payment request dengan
+          API key-nya (browser tidak pernah melihat key itu, dan tidak
+          menentukan harga) lalu Anda langsung diarahkan ke checkout Kasera —
+          yang kini menampilkan <code>order_items</code> yang kami kirim,
+          jadi pembeli melihat baris barangnya, bukan sekadar nominal. Itu
+          saja integrasinya — tapi ada jebakannya: setelah Anda membayar,
+          <em>toko ini tidak tahu apa-apa</em>. Tidak ada yang memberitahunya.
+          Case 2 dan 3 ada persis untuk memperbaiki itu.`,
+        webhook: `<strong>Case 2 — webhook.</strong> Pembelian yang sama,
+          tapi backend kami sudah mendaftarkan URL webhook ke Kasera. Begitu
+          Anda membayar, Kasera mengirim POST event <code>payment.paid</code>
+          bertanda tangan ke server kami; server memverifikasi tanda tangan
+          HMAC-nya lalu menandai pesanan paid. Halaman pesanan yang Anda tuju
+          hanya mem-polling <em>backend kami sendiri</em> — tidak pernah ke
+          Kasera — dan berubah menjadi paid saat webhook tiba.`,
+        polling: `<strong>Case 3 — polling.</strong> Pembelian yang sama,
+          tanpa webhook: tiap kali halaman pesanan menanyakan status ke
+          backend kami, backend bertanya ke Kasera
+          <code>GET /v1/payment-requests/:id</code> — "sudah dibayar?" — dan
+          meneruskan jawabannya. Lebih cerewet daripada webhook, tapi tidak
+          butuh URL publik, jadi pas sekali untuk pengembangan lokal.`,
+      },
+      en: {
+        redirect: `<strong>Case 1 — redirect only.</strong> When you click
+          <em>Buy</em>, our backend creates a payment request with its API key
+          (the browser never sees the key, nor sets the price) and you are
+          redirected straight to Kasera's checkout — which now renders the
+          <code>order_items</code> we send, so the buyer sees the actual item
+          line, not just an amount. That's the entire integration — but note
+          the catch: after you pay, <em>this shop has no idea</em>. Nothing
+          tells it. Cases 2 and 3 exist to fix exactly that.`,
+        webhook: `<strong>Case 2 — webhook.</strong> Same purchase, but our
+          backend has registered a webhook URL with Kasera. The moment you pay,
+          Kasera POSTs a signed <code>payment.paid</code> event to our server,
+          which verifies the HMAC signature and marks the order paid. The order
+          page you'll land on polls <em>our own backend only</em> — never
+          Kasera — and flips to paid when the webhook arrives.`,
+        polling: `<strong>Case 3 — polling.</strong> Same purchase, but no
+          webhook: each time the order page asks our backend for status, the
+          backend asks Kasera <code>GET /v1/payment-requests/:id</code> — "paid
+          yet?" — and passes the answer on. Chattier than a webhook, but it
+          needs no public URL, which makes it perfect for local development.`,
+      },
     };
-    document.getElementById("case-copy").innerHTML = COPY[CASE] || COPY.redirect;
+    function renderCopy() {
+      const c = COPY[lang()];
+      document.getElementById("case-copy").innerHTML = c[CASE] || c.redirect;
+    }
+    renderCopy();
+    document.addEventListener("langchange", renderCopy);
 
     // Render the catalog. Prices shown here are labels; the server has the
-    // real table (see main.go — never trust the client with an amount).
+    // real table (see main.go — never trust the client with an amount). The
+    // buy button carries data-i18n so a language switch relabels it too.
     const grid = document.getElementById("items");
     for (const it of ITEMS) {
       const card = document.createElement("div");
@@ -66,9 +112,11 @@
       card.innerHTML = `
         <div class="name"></div>
         <div class="price">${formatRupiah(it.price)}</div>
-        <button>Beli</button>`;
+        <button data-i18n="store.buy"></button>`;
       card.querySelector(".name").textContent = it.name;
-      card.querySelector("button").addEventListener("click", (e) => buy(it.id, e.target));
+      const btn = card.querySelector("button");
+      btn.textContent = t("store.buy");
+      btn.addEventListener("click", (e) => buy(it.id, e.target));
       grid.appendChild(card);
     }
 
@@ -76,7 +124,7 @@
     // answers with an order that already carries Kasera's checkout_url.
     async function buy(itemId, btn) {
       btn.disabled = true;
-      btn.textContent = "Creating order…";
+      btn.textContent = t("store.creating");
       try {
         const res = await fetch("/api/orders", {
           method: "POST",
@@ -98,9 +146,9 @@
           location.href = "order.html?id=" + encodeURIComponent(data.id);
         }
       } catch (err) {
-        alert("Could not create the order: " + err.message);
+        alert(t("store.fail") + err.message);
         btn.disabled = false;
-        btn.textContent = "Beli";
+        btn.textContent = t("store.buy");
       }
     }
   </script>

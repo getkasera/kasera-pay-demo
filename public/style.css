@@ -1,15 +1,45 @@
 /* One small stylesheet for every page. Neutral on purpose — the point of
-   this demo is the integration code, not the pixels. */
+   this demo is the integration code, not the pixels.
+
+   Two themes, both defined here as custom properties. A tiny inline script
+   in each page's <head> sets <html data-theme="dark"> before first paint
+   (saved choice wins, else the OS preference), so there is no flash. */
 
 :root {
+  color-scheme: light;
   --ink: #1a1a1a;
   --muted: #666;
   --line: #e2e2e2;
   --bg: #fafafa;
   --card: #fff;
-  --accent: #0b6e4f;   /* the one brand-ish color */
+  --accent: #0b6e4f;    /* the one brand-ish color */
+  --on-accent: #fff;    /* text on accent-colored buttons */
   --amber: #9a6700;
   --red: #b3261e;
+  --code-bg: #f0f0ee;
+  --pending-bg: #fdf3d7;
+  --paid-bg: #dcefe6;
+  --expired-bg: #f9dedc;
+}
+
+/* Dark is its own palette, not an inversion: near-black warm greys, a
+   brighter green so links and prices keep their contrast, dark ink on the
+   accent buttons. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8e6e1;
+  --muted: #a09d96;
+  --line: #2e3238;
+  --bg: #14161a;
+  --card: #1d2025;
+  --accent: #4cc296;
+  --on-accent: #0b2b1f;
+  --amber: #d9a53f;
+  --red: #ef8f88;
+  --code-bg: #24262b;
+  --pending-bg: #3a3010;
+  --paid-bg: #12352a;
+  --expired-bg: #3d1f1d;
 }
 
 * { box-sizing: border-box; }
@@ -39,15 +69,35 @@ header nav a { color: var(--muted); text-decoration: none; font-size: .9rem; }
 header nav a:hover { color: var(--ink); }
 header nav a[aria-current="page"] { color: var(--accent); font-weight: 600; }
 
+/* The two little preference chips (language, theme) at the end of the nav */
+header .toggle {
+  font: inherit; font-size: .8rem; cursor: pointer;
+  background: none; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted); padding: .1rem .6rem; margin: 0;
+}
+header .toggle:hover { color: var(--ink); border-color: var(--muted); background: none; filter: none; }
+
 h1 { font-size: 1.5rem; margin: 1rem 0 .5rem; }
 h2 { font-size: 1.1rem; margin-top: 2rem; }
 p.muted, .muted { color: var(--muted); }
+a { color: var(--accent); }
 
 /* The explainer box at the top of each flow */
 .note {
   background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent);
   padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; font-size: .95rem;
 }
+.note.warn { border-left-color: var(--amber); }
+
+/* Landing page: lede paragraph and the two prominent outbound links */
+.lede { font-size: 1.05rem; }
+.links { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.25rem 0; }
+.links a {
+  background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+  padding: .5rem 1rem; text-decoration: none; color: var(--ink); font-weight: 600;
+  font-size: .95rem;
+}
+.links a:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Product grid */
 .grid {
@@ -64,7 +114,7 @@ p.muted, .muted { color: var(--muted); }
 
 button {
   font: inherit; cursor: pointer;
-  background: var(--accent); color: #fff; border: 0; border-radius: 4px;
+  background: var(--accent); color: var(--on-accent); border: 0; border-radius: 4px;
   padding: .5rem .9rem; margin-top: .4rem;
 }
 button:hover { filter: brightness(1.1); }
@@ -72,16 +122,16 @@ button:disabled { background: var(--line); color: var(--muted); cursor: not-allo
 
 /* Order status badges — honest colors: green paid, amber pending, red expired */
 .status { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-weight: 600; font-size: .9rem; }
-.status.pending { background: #fdf3d7; color: var(--amber); }
-.status.paid    { background: #dcefe6; color: var(--accent); }
-.status.expired { background: #f9dedc; color: var(--red); }
+.status.pending { background: var(--pending-bg); color: var(--amber); }
+.status.paid    { background: var(--paid-bg); color: var(--accent); }
+.status.expired { background: var(--expired-bg); color: var(--red); }
 
 dl.order { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; }
 dl.order dt { color: var(--muted); font-size: .85rem; margin-top: .6rem; }
 dl.order dd { margin: 0; }
 dl.order dt:first-child { margin-top: 0; }
 
-code, pre { background: #f0f0ee; border-radius: 3px; font-size: .9em; }
+code, pre { background: var(--code-bg); border-radius: 3px; font-size: .9em; }
 code { padding: .1em .35em; }
 pre { padding: .75rem 1rem; overflow-x: auto; }
 

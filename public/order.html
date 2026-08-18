@@ -1,54 +1,67 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Order status · Kasera Pay demo</title>
+  <title data-i18n="title.order">Status pesanan · demo Kasera Pay</title>
+  <script>
+    // Theme before first paint — a saved choice wins, else follow the OS.
+    if ((localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches && "dark")) === "dark")
+      document.documentElement.dataset.theme = "dark";
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <nav>
       <a class="brand" href="index.html">Kasera Pay demo</a>
-      <a href="nonapi.html">0 · No code</a>
-      <a href="store.html?case=redirect">1 · Redirect</a>
-      <a href="store.html?case=webhook">2 · Webhook</a>
-      <a href="store.html?case=polling">3 · Polling</a>
+      <a href="nonapi.html" data-i18n="nav.case0">0 · Tanpa kode</a>
+      <a href="store.html?case=redirect" data-i18n="nav.case1">1 · Redirect</a>
+      <a href="store.html?case=webhook" data-i18n="nav.case2">2 · Webhook</a>
+      <a href="store.html?case=polling" data-i18n="nav.case3">3 · Polling</a>
+      <button id="lang-toggle" class="toggle" title="Bahasa / Language"></button>
+      <button id="theme-toggle" class="toggle" title="Tema / Theme"></button>
     </nav>
   </header>
 
   <main>
-    <h1>Your order</h1>
-    <div class="note" id="case-copy">Loading…</div>
+    <h1 data-i18n="order.h1">Pesanan Anda</h1>
+    <div class="note" id="case-copy" data-i18n="order.loading">Memuat…</div>
 
     <dl class="order" id="order" hidden>
-      <dt>Item</dt><dd id="o-item"></dd>
-      <dt>Amount</dt><dd id="o-amount"></dd>
-      <dt>Order ID</dt><dd><code id="o-id"></code></dd>
-      <dt>Merchant ref</dt><dd><code id="o-mref"></code></dd>
-      <dt>Kasera payment request</dt><dd><code id="o-payreq"></code></dd>
-      <dt>Status</dt><dd><span class="status" id="o-status"></span></dd>
+      <dt data-i18n="order.item">Barang</dt><dd id="o-item"></dd>
+      <dt data-i18n="order.amount">Jumlah</dt><dd id="o-amount"></dd>
+      <dt data-i18n="order.id">ID pesanan</dt><dd><code id="o-id"></code></dd>
+      <dt data-i18n="order.mref">Ref merchant</dt><dd><code id="o-mref"></code></dd>
+      <dt data-i18n="order.payreq">Payment request Kasera</dt><dd><code id="o-payreq"></code></dd>
+      <dt data-i18n="order.status">Status</dt><dd><span class="status" id="o-status"></span></dd>
     </dl>
 
     <p id="pay-line" hidden>
       <a id="pay-link" href="#" target="_blank" rel="noopener">
-        <button>Pay now — opens Kasera checkout</button>
+        <button data-i18n="order.pay">Bayar sekarang — buka checkout Kasera</button>
       </a>
-      <br><span class="muted">Pay in the other tab, then watch this page —
-      the status below updates on its own.</span>
+      <br><span class="muted" data-i18n="order.payhint">Bayar di tab
+      satunya, lalu pantau halaman ini — status di bawah diperbarui
+      otomatis.</span>
     </p>
 
-    <p id="gone" class="muted" hidden>
-      Order not found. Orders live in the demo backend's memory and vanish
-      when it restarts — go back to the <a href="store.html?case=webhook">store</a>
-      and make a new one.
+    <p id="gone" class="muted" data-i18n="order.gone" hidden>
+      Pesanan tidak ditemukan. Pesanan hidup di memori backend demo dan
+      hilang saat backend di-restart — kembali ke
+      <a href="store.html?case=webhook">toko</a> dan buat yang baru.
     </p>
   </main>
 
   <footer>
-    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+    <span data-i18n="footer.tag">Toko demo Kasera Pay</span> —
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/public/order.html"
+       data-i18n="footer.page">kode halaman ini</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go">main.go</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo" data-i18n="footer.repo">repo GitHub</a>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="store.js"></script>
   <script>
     // Two ways to arrive here: our own store links use ?id=..., Kasera's
@@ -65,66 +78,108 @@
     // forge (signed webhook, or asking Kasera directly).
     const cameBack = params.get("status") === "paid";
 
-    // What this page's polling actually MEANS differs per case, and the demo
-    // is honest about it:
+    // What this page's polling actually MEANS differs per case, and the
+    // demo is honest about it. Both languages; static strings are in
+    // i18n.js, this copy belongs to this page.
     const COPY = {
-      redirect: `<strong>Case 1 — redirect.</strong> Kasera's checkout can
-        now send the buyer back here (<code>return_url</code>, with
-        <code>?status=paid</code> appended) — but a query parameter is not
-        proof of payment, so this page still only shows what <em>our
-        backend</em> says. And in the redirect-only flow <em>nothing ever
-        updates the backend</em> — the status below sits at pending forever,
-        even after you pay. Not a bug: it's the limitation the
-        <a href="store.html?case=webhook">webhook</a> and
-        <a href="store.html?case=polling">polling</a> cases solve.`,
-      webhook: `<strong>Case 2 — webhook.</strong> This page polls
-        <em>our backend only</em>; the browser never talks to Kasera. The
-        backend, in turn, does nothing either — it waits for Kasera's signed
-        <code>payment.paid</code> webhook. When that lands (and its HMAC
-        signature checks out), the status flips to paid.
-        <span class="muted">Local dev note: Kasera requires a public https
-        webhook URL, so use a tunnel (ngrok etc.) — see the README.</span>`,
-      polling: `<strong>Case 3 — polling.</strong> Every refresh you see here
-        is our backend asking Kasera
-        <code>GET /v1/payment-requests/:id</code> and relaying the answer.
-        No webhook, no public URL — just questions.`,
+      id: {
+        redirect: `<strong>Case 1 — redirect.</strong> Checkout Kasera kini
+          bisa mengirim pembeli kembali ke sini (<code>return_url</code>,
+          dengan <code>?status=paid</code> ditambahkan) — tapi parameter
+          query bukan bukti pembayaran, jadi halaman ini tetap hanya
+          menampilkan apa kata <em>backend kami</em>. Dan pada alur
+          redirect-saja <em>tidak ada yang pernah memperbarui backend</em> —
+          status di bawah diam di pending selamanya, bahkan setelah Anda
+          membayar. Bukan bug: inilah keterbatasan yang diselesaikan kasus
+          <a href="store.html?case=webhook">webhook</a> dan
+          <a href="store.html?case=polling">polling</a>.`,
+        webhook: `<strong>Case 2 — webhook.</strong> Halaman ini hanya
+          mem-polling <em>backend kami</em>; browser tidak pernah bicara
+          dengan Kasera. Backend pun tidak berbuat apa-apa — ia menunggu
+          webhook <code>payment.paid</code> bertanda tangan dari Kasera.
+          Saat webhook itu tiba (dan tanda tangan HMAC-nya cocok), status
+          berubah menjadi paid.
+          <span class="muted">Catatan dev lokal: Kasera mewajibkan URL
+          webhook https publik, jadi pakai tunnel (ngrok dsb.) — lihat
+          README.</span>`,
+        polling: `<strong>Case 3 — polling.</strong> Setiap pembaruan yang
+          Anda lihat di sini adalah backend kami bertanya ke Kasera
+          <code>GET /v1/payment-requests/:id</code> lalu meneruskan
+          jawabannya. Tanpa webhook, tanpa URL publik — cuma bertanya.`,
+        cameBack: `<strong>Selamat datang kembali dari checkout.</strong>
+          URL-nya bilang <code>status=paid</code>, tapi itu cuma parameter
+          query — status di bawah dikonfirmasi dulu ke backend kami sebelum
+          kami percaya. `,
+      },
+      en: {
+        redirect: `<strong>Case 1 — redirect.</strong> Kasera's checkout can
+          now send the buyer back here (<code>return_url</code>, with
+          <code>?status=paid</code> appended) — but a query parameter is not
+          proof of payment, so this page still only shows what <em>our
+          backend</em> says. And in the redirect-only flow <em>nothing ever
+          updates the backend</em> — the status below sits at pending forever,
+          even after you pay. Not a bug: it's the limitation the
+          <a href="store.html?case=webhook">webhook</a> and
+          <a href="store.html?case=polling">polling</a> cases solve.`,
+        webhook: `<strong>Case 2 — webhook.</strong> This page polls
+          <em>our backend only</em>; the browser never talks to Kasera. The
+          backend, in turn, does nothing either — it waits for Kasera's signed
+          <code>payment.paid</code> webhook. When that lands (and its HMAC
+          signature checks out), the status flips to paid.
+          <span class="muted">Local dev note: Kasera requires a public https
+          webhook URL, so use a tunnel (ngrok etc.) — see the README.</span>`,
+        polling: `<strong>Case 3 — polling.</strong> Every refresh you see here
+          is our backend asking Kasera
+          <code>GET /v1/payment-requests/:id</code> and relaying the answer.
+          No webhook, no public URL — just questions.`,
+        cameBack: `<strong>Welcome back from checkout.</strong> The URL says
+          <code>status=paid</code>, but that's just a query parameter — the
+          status below is confirmed with our backend before we believe it. `,
+      },
     };
 
     const $ = (s) => document.querySelector(s);
+
+    let order = null; // last response, so a language switch can re-render
+
+    function renderCopy() {
+      if (!order) return;
+      const c = COPY[lang()];
+      let copy = c[order.case] || "";
+      if (cameBack) copy = c.cameBack + copy;
+      const el = $("#case-copy");
+      el.removeAttribute("data-i18n"); // stop applyI18n resetting it to "Memuat…"
+      el.innerHTML = copy;
+    }
+    document.addEventListener("langchange", renderCopy);
 
     async function refresh() {
       const res = await fetch("/api/orders/" + encodeURIComponent(id));
       if (!res.ok) {
         $("#gone").hidden = false;
+        $("#case-copy").removeAttribute("data-i18n");
         $("#case-copy").textContent = "";
         return; // stop polling — the order is not coming back
       }
-      const o = await res.json();
+      order = await res.json();
 
-      let copy = COPY[o.case] || "";
-      if (cameBack) {
-        copy = `<strong>Welcome back from checkout.</strong> The URL says
-          <code>status=paid</code>, but that's just a query parameter — the
-          status below is confirmed with our backend before we believe it.
-          ` + copy;
-      }
-      $("#case-copy").innerHTML = copy;
-      $("#o-item").textContent = o.item_name;
-      $("#o-amount").textContent = formatRupiah(o.amount);
-      $("#o-id").textContent = o.id;
-      $("#o-mref").textContent = o.merchant_ref || o.id;
-      $("#o-payreq").textContent = o.payment_request_id;
+      renderCopy();
+      $("#o-item").textContent = order.item_name;
+      $("#o-amount").textContent = formatRupiah(order.amount);
+      $("#o-id").textContent = order.id;
+      $("#o-mref").textContent = order.merchant_ref || order.id;
+      $("#o-payreq").textContent = order.payment_request_id;
       const st = $("#o-status");
-      st.textContent = o.status;
-      st.className = "status " + o.status;
+      st.textContent = order.status;
+      st.className = "status " + order.status;
       $("#order").hidden = false;
 
       // Offer the checkout link while there is still something to pay.
-      $("#pay-line").hidden = o.status !== "pending";
-      $("#pay-link").href = o.checkout_url;
+      $("#pay-line").hidden = order.status !== "pending";
+      $("#pay-link").href = order.checkout_url;
 
       // Keep watching until the order settles.
-      if (o.status === "pending") setTimeout(refresh, 2500);
+      if (order.status === "pending") setTimeout(refresh, 2500);
     }
 
     if (id) refresh(); else $("#gone").hidden = false;

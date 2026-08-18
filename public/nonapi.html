@@ -1,63 +1,77 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Case 0 — no code at all · Kasera Pay demo</title>
+  <title data-i18n="title.nonapi">Case 0 — tanpa kode · demo Kasera Pay</title>
+  <script>
+    // Theme before first paint — a saved choice wins, else follow the OS.
+    if ((localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches && "dark")) === "dark")
+      document.documentElement.dataset.theme = "dark";
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <nav>
       <a class="brand" href="index.html">Kasera Pay demo</a>
-      <a href="nonapi.html">0 · No code</a>
-      <a href="store.html?case=redirect">1 · Redirect</a>
-      <a href="store.html?case=webhook">2 · Webhook</a>
-      <a href="store.html?case=polling">3 · Polling</a>
+      <a href="nonapi.html" data-i18n="nav.case0">0 · Tanpa kode</a>
+      <a href="store.html?case=redirect" data-i18n="nav.case1">1 · Redirect</a>
+      <a href="store.html?case=webhook" data-i18n="nav.case2">2 · Webhook</a>
+      <a href="store.html?case=polling" data-i18n="nav.case3">3 · Polling</a>
+      <button id="lang-toggle" class="toggle" title="Bahasa / Language"></button>
+      <button id="theme-toggle" class="toggle" title="Tema / Theme"></button>
     </nav>
   </header>
 
   <main>
-    <h1>Case 0 — you don't need any code for this</h1>
+    <h1 data-i18n="nonapi.h1">Case 0 — untuk ini Anda tidak butuh kode</h1>
 
-    <p>
-      Before writing a single line of integration code, know that the whole
-      loop already works from the dashboard:
+    <p data-i18n="nonapi.lede">
+      Sebelum menulis satu baris kode integrasi pun, ketahuilah bahwa
+      seluruh alurnya sudah jalan dari dashboard:
     </p>
 
     <ol>
-      <li>Open the <strong>Kasera Pay dashboard</strong> and create a payment
-        request: amount, description, done.</li>
-      <li>The dashboard gives you a <strong>checkout link</strong> and a
-        <strong>QRIS code</strong>.</li>
-      <li>Share the link over WhatsApp, paste it in an invoice, or print the
-        QR and tape it to the counter.</li>
-      <li>The buyer pays; the dashboard shows the request flip to
-        <span class="status paid">paid</span>, and you can get notified.</li>
+      <li data-i18n="nonapi.step1">Buka <strong>dashboard Kasera Pay</strong>
+        dan buat payment request: jumlah, deskripsi, selesai.</li>
+      <li data-i18n="nonapi.step2">Dashboard memberi Anda <strong>tautan
+        checkout</strong> dan <strong>kode QRIS</strong>.</li>
+      <li data-i18n="nonapi.step3">Bagikan tautannya lewat WhatsApp, tempel
+        di invoice, atau cetak QR-nya dan tempel di meja kasir.</li>
+      <li data-i18n="nonapi.step4">Pembeli membayar; di dashboard status
+        berubah menjadi <span class="status paid">paid</span>, dan Anda bisa
+        menerima notifikasi.</li>
     </ol>
 
-    <div class="note">
-      <strong>Try it live:</strong> a shared payment link looks like
-      <code>https://pay.kasera.id/p/&lt;token&gt;</code> — for a local dev
-      stack, <code>http://localhost:8888/p/&lt;token&gt;</code>.
-      <em>(Placeholder: create one in your dashboard and paste it here.)</em>
+    <div class="note" data-i18n="nonapi.note">
+      <strong>Coba langsung:</strong> tautan pembayaran yang dibagikan
+      berbentuk <code>https://pay.kasera.id/p/&lt;token&gt;</code> — untuk
+      stack dev lokal, <code>http://localhost:8888/p/&lt;token&gt;</code>.
+      <em>(Placeholder: buat satu di dashboard Anda dan tempel di sini.)</em>
     </div>
 
-    <p>
-      This is the right "integration" for a warung, a bake sale, or anyone
-      whose order volume fits in their head. The API cases (1–3) exist for
-      when you want <em>your own website</em> to create these links and react
-      to payment automatically — which is exactly what the rest of this demo
-      shows.
+    <p data-i18n="nonapi.outro">
+      Inilah "integrasi" yang pas untuk warung, bazar kue, atau siapa pun
+      yang volume pesanannya masih muat di kepala. Kasus API (1–3) ada untuk
+      saat Anda ingin <em>situs Anda sendiri</em> yang membuat tautan ini dan
+      bereaksi terhadap pembayaran secara otomatis — persis yang ditunjukkan
+      sisa demo ini.
     </p>
 
-    <p><a href="store.html?case=redirect">Next: Case 1, the simplest API integration →</a></p>
+    <p><a href="store.html?case=redirect" data-i18n="nonapi.next">Berikutnya:
+      Case 1, integrasi API paling sederhana →</a></p>
   </main>
 
   <footer>
-    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+    <span data-i18n="footer.tag">Toko demo Kasera Pay</span> —
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/public/nonapi.html"
+       data-i18n="footer.page">kode halaman ini</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go">main.go</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo" data-i18n="footer.repo">repo GitHub</a>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="store.js"></script>
 </body>
 </html>

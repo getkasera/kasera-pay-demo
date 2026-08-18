@@ -1,72 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kasera Pay demo — four ways to get paid</title>
+  <title data-i18n="title.index">Demo Kasera Pay — empat cara menerima pembayaran</title>
+  <script>
+    // Theme before first paint — a saved choice wins, else follow the OS.
+    if ((localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches && "dark")) === "dark")
+      document.documentElement.dataset.theme = "dark";
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <nav>
       <a class="brand" href="index.html">Kasera Pay demo</a>
-      <a href="nonapi.html">0 · No code</a>
-      <a href="store.html?case=redirect">1 · Redirect</a>
-      <a href="store.html?case=webhook">2 · Webhook</a>
-      <a href="store.html?case=polling">3 · Polling</a>
+      <a href="nonapi.html" data-i18n="nav.case0">0 · Tanpa kode</a>
+      <a href="store.html?case=redirect" data-i18n="nav.case1">1 · Redirect</a>
+      <a href="store.html?case=webhook" data-i18n="nav.case2">2 · Webhook</a>
+      <a href="store.html?case=polling" data-i18n="nav.case3">3 · Polling</a>
+      <button id="lang-toggle" class="toggle" title="Bahasa / Language"></button>
+      <button id="theme-toggle" class="toggle" title="Tema / Theme"></button>
     </nav>
   </header>
 
   <main>
-    <h1>Four ways to accept payments with Kasera Pay</h1>
-    <p>
-      Kasera Pay lets Indonesian merchants accept QRIS payments through a
-      hosted checkout page: you create a <em>payment request</em>, Kasera
-      gives you a link, the buyer scans and pays, and you get told (or you
-      ask) when the money has arrived. This demo is a tiny clothing shop,
-      <strong>Kasera Threads</strong>, built four times — once for each way
-      of integrating, from "no code at all" to a full webhook flow.
+    <h1 data-i18n="home.h1">Empat cara menerima pembayaran dengan Kasera Pay</h1>
+    <p class="lede" data-i18n="home.lede">
+      Situs ini adalah toko demo yang benar-benar berjalan sekaligus contoh
+      integrasi <strong>Kasera Pay</strong> — pembayaran QRIS untuk merchant
+      Indonesia lewat halaman checkout yang di-host Kasera. Anda membuat
+      <em>payment request</em>, Kasera memberikan tautannya, pembeli memindai
+      dan membayar, lalu Anda diberi tahu (atau bertanya sendiri) saat
+      uangnya masuk. Toko kaosnya, <strong>Kasera Threads</strong>, dibangun
+      empat kali — satu untuk tiap cara integrasi, dari tanpa kode sama
+      sekali sampai alur webhook penuh.
     </p>
 
+    <div class="links">
+      <a href="https://pay.kasera.id" target="_blank" rel="noopener">pay.kasera.id →</a>
+      <a href="https://github.com/getkasera/kasera-pay-demo" target="_blank"
+         rel="noopener" data-i18n="home.src">Kode sumber di GitHub →</a>
+    </div>
+
+    <div class="note warn" data-i18n="home.status">
+      <strong>Status pra-rilis:</strong> Kasera Pay saat ini berjalan di
+      <em>sandbox</em> DOKU — semua alur di sini berfungsi ujung ke ujung,
+      tetapi pembayaran belum bisa diselesaikan dengan uang sungguhan.
+    </div>
+
+    <h2 data-i18n="home.cases">Empat kasusnya</h2>
     <div class="cases">
       <a href="nonapi.html">
         <div class="k">CASE 0</div>
-        <div><strong>No API at all</strong></div>
-        <p class="muted">Create payment links from the dashboard and share
-        them. Zero code.</p>
+        <div><strong data-i18n="home.case0.t">Tanpa API sama sekali</strong></div>
+        <p class="muted" data-i18n="home.case0.p">Buat tautan pembayaran dari
+        dashboard dan bagikan. Nol kode.</p>
       </a>
       <a href="store.html?case=redirect">
         <div class="k">CASE 1</div>
-        <div><strong>Redirect only</strong></div>
-        <p class="muted">Create a payment request from your backend, send the
-        buyer to checkout. Simplest possible API use.</p>
+        <div><strong data-i18n="home.case1.t">Redirect saja</strong></div>
+        <p class="muted" data-i18n="home.case1.p">Backend Anda membuat
+        payment request lalu mengarahkan pembeli ke checkout. Pemakaian API
+        paling sederhana.</p>
       </a>
       <a href="store.html?case=webhook">
         <div class="k">CASE 2</div>
-        <div><strong>Webhook</strong></div>
-        <p class="muted">Kasera calls your server the moment payment lands —
-        signed, verified, at-least-once. The production way.</p>
+        <div><strong data-i18n="home.case2.t">Webhook</strong></div>
+        <p class="muted" data-i18n="home.case2.p">Kasera memanggil server
+        Anda begitu pembayaran masuk — bertanda tangan, terverifikasi,
+        at-least-once. Cara produksi.</p>
       </a>
       <a href="store.html?case=polling">
         <div class="k">CASE 3</div>
-        <div><strong>Polling</strong></div>
-        <p class="muted">Your server asks Kasera "paid yet?" until it is. No
-        public URL needed — good for local dev.</p>
+        <div><strong data-i18n="home.case3.t">Polling</strong></div>
+        <p class="muted" data-i18n="home.case3.p">Server Anda bertanya ke
+        Kasera "sudah dibayar?" sampai terjawab. Tanpa URL publik — pas untuk
+        pengembangan lokal.</p>
       </a>
     </div>
 
-    <h2>How this demo is built</h2>
-    <p class="muted">
-      One Go file (<code>main.go</code>, stdlib only) plus these static
-      pages. No framework, no build step — read the source top to bottom and
-      you have read the whole integration.
+    <h2 data-i18n="home.built.h2">Cara demo ini dibangun</h2>
+    <p class="muted" data-i18n="home.built.p">
+      Satu file Go
+      (<a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go"><code>main.go</code></a>,
+      hanya stdlib) plus halaman statis di
+      <a href="https://github.com/getkasera/kasera-pay-demo/tree/main/public"><code>public/</code></a>
+      — HTML polos, vanilla JS, satu file CSS. Tanpa framework, tanpa build
+      step, tanpa npm. Baca sumbernya dari atas ke bawah dan Anda sudah
+      membaca seluruh integrasinya.
     </p>
   </main>
 
   <footer>
-    Kasera Pay demo shop — <a href="#">view source</a> (repo URL TBD)
+    <span data-i18n="footer.tag">Toko demo Kasera Pay</span> —
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/public/index.html"
+       data-i18n="footer.page">kode halaman ini</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go">main.go</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo" data-i18n="footer.repo">repo GitHub</a>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="store.js"></script>
 </body>
 </html>
