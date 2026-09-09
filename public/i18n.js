@@ -35,19 +35,18 @@ const I18N = {
       in one place to try.`,
   },
   "home.lede": {
-    id: `Pilih satu kasus di bawah dan lihat langsung cara kerjanya — tanpa
-      mendaftar, tanpa uang sungguhan. Anda akan tahu persis bagaimana
+    id: `Pilih satu kasus dan lihat langsung cara kerjanya — tanpa
+      mendaftar, tanpa uang sungguhan. Anda tahu persis bagaimana
       <strong>Kasera Pay</strong> masuk ke alur pembayaran Anda sebelum
-      menulis satu baris kode pun. Toko demonya,
-      <strong>Kasera Threads</strong>, benar-benar berjalan dan dibangun
-      empat kali — satu untuk tiap cara integrasi, dari tanpa kode sama
-      sekali sampai alur webhook penuh.`,
-    en: `Pick a case below and see it in action — no sign-up, no real
-      money. You'll know exactly how <strong>Kasera Pay</strong> fits your
-      payment flow before you write a single line of code. The demo shop,
-      <strong>Kasera Threads</strong>, actually runs, and is built four
-      times — once per way of integrating, from no code at all to a full
-      webhook flow.`,
+      menulis satu baris kode pun.`,
+    en: `Pick a case and see it in action — no sign-up, no real money.
+      You'll know exactly how <strong>Kasera Pay</strong> fits your payment
+      flow before you write a single line of code.`,
+  },
+  "home.sandbox": {
+    id: `Status pra-rilis — mode sandbox, pembayaran tidak memakai uang
+      sungguhan.`,
+    en: `Pre-launch — sandbox mode, payments never move real money.`,
   },
   "home.cta": { id: `Coba demo →`, en: `Try the demo →` },
   "home.src": {
@@ -56,17 +55,87 @@ const I18N = {
   },
   "home.badge": { id: `Demo interaktif`, en: `Interactive demo` },
   "home.badge0": { id: `Panduan singkat`, en: `Quick guide` },
+  "home.badge2": { id: `Cara produksi`, en: `The production way` },
+  "home.int.k": {
+    id: `TIDAK MAU MENULIS KODE INTEGRASI?`,
+    en: `DON'T WANT TO WRITE INTEGRATION CODE?`,
+  },
+  "home.int.h2": { id: `Integrasi siap pakai`, en: `Ready-made integrations` },
+  "home.int.lede": {
+    id: `Keempat kasus di atas juga sudah dibungkus jadi produk jadi — pasang
+      dan terima pembayaran.`,
+    en: `The four cases above also come pre-packaged — install one and start
+      getting paid.`,
+  },
+  "home.int.woo.t": { id: `Plugin WooCommerce`, en: `WooCommerce plugin` },
+  "home.int.woo.p": {
+    id: `Unduh, aktifkan, isi API key — toko WordPress Anda menerima QRIS,
+      Virtual Account, dan kartu. Webhook bertanda tangan sudah diurus plugin.`,
+    en: `Download, activate, paste your API key — your WordPress store accepts
+      QRIS, Virtual Accounts, and cards. Signed webhooks are handled for you.`,
+  },
+  "home.int.woo.cta": { id: `Unduh dari Releases →`, en: `Download from Releases →` },
+  "home.int.mcp.t": { id: `MCP untuk AI agent`, en: `MCP for AI agents` },
+  "home.int.mcp.p": {
+    id: `Agen AI Anda membuat payment request sendiri lewat
+      <code>npx kasera-pay-mcp</code> — aman di sandbox, kunci live hanya-baca
+      secara bawaan.`,
+    en: `Your AI agent creates payment requests itself via
+      <code>npx kasera-pay-mcp</code> — sandbox-safe, live keys read-only by
+      default.`,
+  },
+  "home.int.mcp.cta": { id: `Baca docs/mcp →`, en: `Read docs/mcp →` },
+  "home.int.api.t": { id: `API /v1 langsung`, en: `The raw /v1 API` },
+  "home.int.api.p": {
+    id: `Satu endpoint untuk membuat transaksi, webhook bertanda tangan, dan
+      OpenAPI lengkap — persis yang dipakai keempat demo di atas.`,
+    en: `One endpoint to create transactions, signed webhooks, and a full
+      OpenAPI document — exactly what the four demos above use.`,
+  },
+  "home.int.api.cta": { id: `Lihat dokumentasi API →`, en: `See the API docs →` },
+  "home.shop.k": { id: `TOKO DEMONYA`, en: `THE DEMO SHOP` },
+  "home.shop.lede": {
+    id: `Toko kaos yang benar-benar berjalan — tiap tombol Beli membuat payment
+      request sungguhan di mode sandbox.`,
+    en: `A shirt shop that actually runs — every Buy button creates a real
+      payment request in sandbox mode.`,
+  },
+  "home.shop.cta": { id: `Buka toko →`, en: `Open the shop →` },
   "home.try": { id: `Coba demo →`, en: `Try demo →` },
   "home.try0": { id: `Lihat panduan →`, en: `See the guide →` },
-  "home.status": {
-    id: `<strong>Status pra-rilis:</strong> Kasera Pay saat ini berjalan dalam mode
-      <em>sandbox</em> pembayaran — semua alur di sini berfungsi ujung ke ujung,
-      tetapi pembayaran belum bisa diselesaikan dengan uang sungguhan.`,
-    en: `<strong>Pre-launch status:</strong> Kasera Pay currently runs in
-      payment-<em>sandbox</em> mode — every flow here works end to end, but
-      payments cannot complete with real money yet.`,
+  "home.flow.k": { id: `CARA KERJANYA`, en: `HOW IT WORKS` },
+  "home.flow.s1.t": { id: `1 · Buat payment request`, en: `1 · Create a payment request` },
+  "home.flow.s1.p": {
+    id: `Backend Anda memanggil <code>POST /v1/transactions</code>.`,
+    en: `Your backend calls <code>POST /v1/transactions</code>.`,
   },
-  "home.cases": { id: `Empat kasusnya`, en: `The four cases` },
+  "home.flow.s2.t": { id: `2 · Pembeli scan QRIS`, en: `2 · Buyer scans QRIS` },
+  "home.flow.s2.p": {
+    id: `Checkout yang di-host Kasera — dari aplikasi bank atau e-wallet mana pun.`,
+    en: `On Kasera's hosted checkout — from any banking or e-wallet app.`,
+  },
+  "home.flow.s3.t": { id: `3 · Kasera memberi tahu`, en: `3 · Kasera tells you` },
+  "home.flow.s3.p": {
+    id: `Webhook <code>payment.paid</code> bertanda tangan — atau server Anda
+      yang bertanya.`,
+    en: `A signed <code>payment.paid</code> webhook — or your server asks.`,
+  },
+  "home.flow.s4.t": { id: `4 · Pesanan lunas`, en: `4 · Order paid` },
+  "home.flow.s4.p": {
+    id: `Status berubah menjadi <strong class="hl">paid</strong> — uang menuju
+      rekening Anda.`,
+    en: `The status flips to <strong class="hl">paid</strong> — money heads to
+      your bank account.`,
+  },
+  "home.cases.k": { id: `EMPAT KASUSNYA`, en: `THE FOUR CASES` },
+  "home.cases.h2": {
+    id: `Dari nol kode sampai alur produksi`,
+    en: `From zero code to the production flow`,
+  },
+  "home.cases.lede": {
+    id: `Toko yang sama dibangun empat kali — satu untuk tiap cara integrasi.`,
+    en: `The same shop, built four times — once per way of integrating.`,
+  },
   "home.case0.t": { id: `Tanpa API sama sekali`, en: `No API at all` },
   "home.case0.p": {
     id: `Buat tautan pembayaran dari dashboard dan bagikan. Nol kode.`,
@@ -93,24 +162,6 @@ const I18N = {
     en: `Your server asks Kasera "paid yet?" until it is. No public URL
       needed — good for local dev.`,
   },
-  "home.built.h2": { id: `Cara demo ini dibangun`, en: `How this demo is built` },
-  "home.built.p": {
-    id: `Satu file Go
-      (<a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go"><code>main.go</code></a>,
-      hanya stdlib) plus halaman statis di
-      <a href="https://github.com/getkasera/kasera-pay-demo/tree/main/public"><code>public/</code></a>
-      — HTML polos, vanilla JS, satu file CSS. Tanpa framework, tanpa build
-      step, tanpa npm. Baca sumbernya dari atas ke bawah dan Anda sudah
-      membaca seluruh integrasinya.`,
-    en: `One Go file
-      (<a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go"><code>main.go</code></a>,
-      stdlib only) plus the static pages in
-      <a href="https://github.com/getkasera/kasera-pay-demo/tree/main/public"><code>public/</code></a>
-      — plain HTML, vanilla JS, one CSS file. No framework, no build step,
-      no npm. Read the source top to bottom and you have read the whole
-      integration.`,
-  },
-
   // --- store.html + store.js -------------------------------------------
   "title.store": {
     id: `Kasera Threads · demo Kasera Pay`,
