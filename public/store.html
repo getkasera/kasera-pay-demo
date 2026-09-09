@@ -222,9 +222,11 @@ sequenceDiagram
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
+        <div class="thumb"></div>
         <div class="name"></div>
         <div class="price">${formatRupiah(it.price)}</div>
         <button data-i18n="store.buy"></button>`;
+      card.querySelector(".thumb").textContent = it.emoji;
       card.querySelector(".name").textContent = it.name;
       const btn = card.querySelector("button");
       btn.textContent = t("store.buy");

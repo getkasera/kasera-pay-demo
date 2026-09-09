@@ -25,22 +25,26 @@
   </header>
 
   <main>
-    <h1 data-i18n="home.h1">Empat cara menerima pembayaran dengan Kasera Pay</h1>
-    <p class="lede" data-i18n="home.lede">
-      Situs ini adalah toko demo yang benar-benar berjalan sekaligus contoh
-      integrasi <strong>Kasera Pay</strong> — pembayaran QRIS untuk merchant
-      Indonesia lewat halaman checkout yang di-host Kasera. Anda membuat
-      <em>payment request</em>, Kasera memberikan tautannya, pembeli memindai
-      dan membayar, lalu Anda diberi tahu (atau bertanya sendiri) saat
-      uangnya masuk. Toko kaosnya, <strong>Kasera Threads</strong>, dibangun
-      empat kali — satu untuk tiap cara integrasi, dari tanpa kode sama
-      sekali sampai alur webhook penuh.
-    </p>
+    <div class="hero">
+      <span class="eyebrow" data-i18n="home.eyebrow">Simulasi fitur pembayaran</span>
+      <h1 data-i18n="home.h1">Semua cara menerima <span class="hl">pembayaran</span>
+        dengan Kasera Pay, dalam satu tempat untuk dicoba.</h1>
+      <p class="lede" data-i18n="home.lede">
+        Pilih satu kasus di bawah dan lihat langsung cara kerjanya — tanpa
+        mendaftar, tanpa uang sungguhan. Anda akan tahu persis bagaimana
+        <strong>Kasera Pay</strong> masuk ke alur pembayaran Anda sebelum
+        menulis satu baris kode pun. Toko demonya,
+        <strong>Kasera Threads</strong>, benar-benar berjalan dan dibangun
+        empat kali — satu untuk tiap cara integrasi, dari tanpa kode sama
+        sekali sampai alur webhook penuh.
+      </p>
 
-    <div class="links">
-      <a href="https://pay.kasera.id" target="_blank" rel="noopener">pay.kasera.id →</a>
-      <a href="https://github.com/getkasera/kasera-pay-demo" target="_blank"
-         rel="noopener" data-i18n="home.src">Kode sumber di GitHub →</a>
+      <div class="links">
+        <a class="btn primary" href="store.html?case=webhook" data-i18n="home.cta">Coba demo →</a>
+        <a class="btn" href="https://pay.kasera.id" target="_blank" rel="noopener">pay.kasera.id →</a>
+        <a class="btn" href="https://github.com/getkasera/kasera-pay-demo" target="_blank"
+           rel="noopener" data-i18n="home.src">Kode sumber di GitHub →</a>
+      </div>
     </div>
 
     <div class="note warn" data-i18n="home.status">
@@ -52,31 +56,35 @@
     <h2 data-i18n="home.cases">Empat kasusnya</h2>
     <div class="cases">
       <a href="nonapi.html">
-        <div class="k">CASE 0</div>
+        <div class="k">CASE 0 <span class="badge" data-i18n="home.badge0">Panduan singkat</span></div>
         <div><strong data-i18n="home.case0.t">Tanpa API sama sekali</strong></div>
         <p class="muted" data-i18n="home.case0.p">Buat tautan pembayaran dari
         dashboard dan bagikan. Nol kode.</p>
+        <span class="try" data-i18n="home.try0">Lihat panduan →</span>
       </a>
       <a href="store.html?case=redirect">
-        <div class="k">CASE 1</div>
+        <div class="k">CASE 1 <span class="badge" data-i18n="home.badge">Demo interaktif</span></div>
         <div><strong data-i18n="home.case1.t">Redirect saja</strong></div>
         <p class="muted" data-i18n="home.case1.p">Backend Anda membuat
         payment request lalu mengarahkan pembeli ke checkout. Pemakaian API
         paling sederhana.</p>
+        <span class="try" data-i18n="home.try">Coba demo →</span>
       </a>
       <a href="store.html?case=webhook">
-        <div class="k">CASE 2</div>
+        <div class="k">CASE 2 <span class="badge" data-i18n="home.badge">Demo interaktif</span></div>
         <div><strong data-i18n="home.case2.t">Webhook</strong></div>
         <p class="muted" data-i18n="home.case2.p">Kasera memanggil server
         Anda begitu pembayaran masuk — bertanda tangan, terverifikasi,
         at-least-once. Cara produksi.</p>
+        <span class="try" data-i18n="home.try">Coba demo →</span>
       </a>
       <a href="store.html?case=polling">
-        <div class="k">CASE 3</div>
+        <div class="k">CASE 3 <span class="badge" data-i18n="home.badge">Demo interaktif</span></div>
         <div><strong data-i18n="home.case3.t">Polling</strong></div>
         <p class="muted" data-i18n="home.case3.p">Server Anda bertanya ke
         Kasera "sudah dibayar?" sampai terjawab. Tanpa URL publik — pas untuk
         pengembangan lokal.</p>
+        <span class="try" data-i18n="home.try">Coba demo →</span>
       </a>
     </div>
 

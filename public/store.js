@@ -6,12 +6,12 @@
 // item_id, and the server looks the price up itself. If you edit a price
 // here in devtools, you change the label, not what anyone pays.
 const ITEMS = [
-  { id: "tee-batik",     name: "Batik Print Tee",       price: 189000 },
-  { id: "tee-plain",     name: "Heavyweight Plain Tee", price: 149000 },
-  { id: "hoodie-kasera", name: "Kasera Threads Hoodie", price: 429000 },
-  { id: "cap-canvas",    name: "Canvas Cap",            price: 119000 },
-  { id: "socks-3pack",   name: "Socks (3 pack)",        price: 89000 },
-  { id: "tote-denim",    name: "Denim Tote Bag",        price: 159000 },
+  { id: "tee-batik",     name: "Batik Print Tee",       price: 189000, emoji: "👕" },
+  { id: "tee-plain",     name: "Heavyweight Plain Tee", price: 149000, emoji: "🎽" },
+  { id: "hoodie-kasera", name: "Kasera Threads Hoodie", price: 429000, emoji: "🧥" },
+  { id: "cap-canvas",    name: "Canvas Cap",            price: 119000, emoji: "🧢" },
+  { id: "socks-3pack",   name: "Socks (3 pack)",        price: 89000,  emoji: "🧦" },
+  { id: "tote-denim",    name: "Denim Tote Bag",        price: 159000, emoji: "👜" },
 ];
 
 // IDR is written in whole rupiah with dot separators: Rp 189.000

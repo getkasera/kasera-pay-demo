@@ -24,31 +24,40 @@ const I18N = {
     id: `Demo Kasera Pay — empat cara menerima pembayaran`,
     en: `Kasera Pay demo — four ways to get paid`,
   },
+  "home.eyebrow": {
+    id: `Simulasi fitur pembayaran`,
+    en: `Payment feature simulation`,
+  },
   "home.h1": {
-    id: `Empat cara menerima pembayaran dengan Kasera Pay`,
-    en: `Four ways to accept payments with Kasera Pay`,
+    id: `Semua cara menerima <span class="hl">pembayaran</span> dengan
+      Kasera Pay, dalam satu tempat untuk dicoba.`,
+    en: `Every way to get <span class="hl">paid</span> with Kasera Pay,
+      in one place to try.`,
   },
   "home.lede": {
-    id: `Situs ini adalah toko demo yang benar-benar berjalan sekaligus
-      contoh integrasi <strong>Kasera Pay</strong> — pembayaran QRIS untuk
-      merchant Indonesia lewat halaman checkout yang di-host Kasera. Anda
-      membuat <em>payment request</em>, Kasera memberikan tautannya, pembeli
-      memindai dan membayar, lalu Anda diberi tahu (atau bertanya sendiri)
-      saat uangnya masuk. Toko kaosnya, <strong>Kasera Threads</strong>,
-      dibangun empat kali — satu untuk tiap cara integrasi, dari tanpa kode
-      sama sekali sampai alur webhook penuh.`,
-    en: `This site is a working demo shop plus reference integrations for
-      <strong>Kasera Pay</strong> — QRIS payments for Indonesian merchants
-      through a hosted checkout page. You create a <em>payment request</em>,
-      Kasera gives you a link, the buyer scans and pays, and you get told
-      (or you ask) when the money has arrived. The shop,
-      <strong>Kasera Threads</strong>, is built four times — once for each
-      way of integrating, from no code at all to a full webhook flow.`,
+    id: `Pilih satu kasus di bawah dan lihat langsung cara kerjanya — tanpa
+      mendaftar, tanpa uang sungguhan. Anda akan tahu persis bagaimana
+      <strong>Kasera Pay</strong> masuk ke alur pembayaran Anda sebelum
+      menulis satu baris kode pun. Toko demonya,
+      <strong>Kasera Threads</strong>, benar-benar berjalan dan dibangun
+      empat kali — satu untuk tiap cara integrasi, dari tanpa kode sama
+      sekali sampai alur webhook penuh.`,
+    en: `Pick a case below and see it in action — no sign-up, no real
+      money. You'll know exactly how <strong>Kasera Pay</strong> fits your
+      payment flow before you write a single line of code. The demo shop,
+      <strong>Kasera Threads</strong>, actually runs, and is built four
+      times — once per way of integrating, from no code at all to a full
+      webhook flow.`,
   },
+  "home.cta": { id: `Coba demo →`, en: `Try the demo →` },
   "home.src": {
     id: `Kode sumber di GitHub →`,
     en: `Source code on GitHub →`,
   },
+  "home.badge": { id: `Demo interaktif`, en: `Interactive demo` },
+  "home.badge0": { id: `Panduan singkat`, en: `Quick guide` },
+  "home.try": { id: `Coba demo →`, en: `Try demo →` },
+  "home.try0": { id: `Lihat panduan →`, en: `See the guide →` },
   "home.status": {
     id: `<strong>Status pra-rilis:</strong> Kasera Pay saat ini berjalan dalam mode
       <em>sandbox</em> pembayaran — semua alur di sini berfungsi ujung ke ujung,
