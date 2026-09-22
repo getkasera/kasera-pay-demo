@@ -81,3 +81,26 @@ func TestPayURLDropsThePrefix(t *testing.T) {
 		t.Fatalf("payURL without prefix = %q", got)
 	}
 }
+
+// Case 4: a delivery signed under the sandbox endpoint's secret is accepted
+// beside the live one; an empty secret never verifies anything.
+func TestVerifyAnySignature(t *testing.T) {
+	body := []byte(`{"id":"evt_2","type":"invoice.issued"}`)
+	sign := func(secret string) string {
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(body)
+		return hex.EncodeToString(mac.Sum(nil))
+	}
+	if !verifyAnySignature(body, sign("whsec_test"), "whsec_live", "whsec_test") {
+		t.Fatal("sandbox secret rejected")
+	}
+	if !verifyAnySignature(body, sign("whsec_live"), "whsec_live", "") {
+		t.Fatal("live secret rejected when the sandbox one is unset")
+	}
+	if verifyAnySignature(body, sign(""), "whsec_live", "") {
+		t.Fatal("an empty secret must never verify")
+	}
+	if verifyAnySignature(body, sign("whsec_other"), "whsec_live", "whsec_test") {
+		t.Fatal("unknown secret accepted")
+	}
+}
