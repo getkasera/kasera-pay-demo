@@ -88,6 +88,11 @@ var (
 	apiKey        = os.Getenv("KASERA_API_KEY")
 	apiBase       = envOr("KASERA_API_BASE", "http://localhost:8888")
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
+	// webhookTestSecret signs the sandbox endpoint's deliveries. Kasera keeps
+	// one endpoint list per mode, each with its own whsec_, so case 4's
+	// events (sent under the sandbox key's merchant) may arrive signed with a
+	// different secret than the one-off cases' payment.paid. Optional.
+	webhookTestSecret = os.Getenv("WEBHOOK_TEST_SECRET")
 	// testAPIKey is a SANDBOX key (kp_test_...) for case 4. A subscription is
 	// sandbox or live by the key that created it, and only a sandbox one can
 	// have its clock moved — so the recurring case needs a test key even where
@@ -653,7 +658,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		httpErr(w, 400, "could not read body")
 		return
 	}
-	if !verifySignature(webhookSecret, body, r.Header.Get("Kasera-Signature")) {
+	if !verifyAnySignature(body, r.Header.Get("Kasera-Signature"), webhookSecret, webhookTestSecret) {
 		httpErr(w, 401, "bad signature")
 		return
 	}
@@ -720,6 +725,18 @@ func recordSubscriptionEvent(typ, id, at, dataID, dataSubID string) {
 	}
 }
 
+// verifyAnySignature accepts a body signed under any of the configured
+// secrets (live and sandbox endpoints each have their own). An empty secret
+// is never tried — it would otherwise verify a signature over nothing.
+func verifyAnySignature(body []byte, signature string, secrets ...string) bool {
+	for _, s := range secrets {
+		if s != "" && verifySignature(s, body, signature) {
+			return true
+		}
+	}
+	return false
+}
+
 // verifySignature checks Kasera's webhook signature: the Kasera-Signature
 // header is lowercase hex HMAC-SHA256 over the exact body bytes, keyed with
 // your whsec_ secret. hmac.Equal is a constant-time compare — a plain ==
@@ -782,6 +799,7 @@ func main() {
 	apiKey = os.Getenv("KASERA_API_KEY")
 	apiBase = envOr("KASERA_API_BASE", "http://localhost:8888")
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
+	webhookTestSecret = os.Getenv("WEBHOOK_TEST_SECRET")
 	testAPIKey = envOr("KASERA_TEST_API_KEY", apiKey)
 
 	mux := http.NewServeMux()
