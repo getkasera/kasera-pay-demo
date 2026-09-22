@@ -278,3 +278,14 @@ footer {
   color: var(--muted); font-size: .85rem;
 }
 footer a { color: var(--muted); }
+
+/* Case 4 (langganan.html): the invoice table and the sign-up fields. */
+input { width: 100%; box-sizing: border-box; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: inherit; font: inherit; }
+input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 6px; font-size: .95rem; }
+th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { color: var(--muted); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+tr:last-child td { border-bottom: 0; }
+/* An inline display style must not defeat the hidden attribute (langganan.html's form). */
+[hidden] { display: none !important; }

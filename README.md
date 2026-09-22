@@ -1,14 +1,15 @@
-# Kasera Pay demo — four ways to get paid
+# Kasera Pay demo — five ways to get paid
 
 A tiny clothing shop ("Kasera Threads") that integrates with
-[Kasera Pay](https://pay.kasera.id) four different ways, from *no code at
-all* to a production-style webhook flow. It is deliberately minimal:
+[Kasera Pay](https://pay.kasera.id) five different ways, from *no code at
+all* to a production-style webhook flow and a monthly subscription. It is
+deliberately minimal:
 
 - **Backend:** one Go file, standard library only. No frameworks, no deps.
 - **Frontend:** plain HTML + vanilla JS. No build step, no npm.
 - The code **is** the documentation — read `main.go` top to bottom.
 
-## The four cases
+## The five cases
 
 | # | Case | How the shop learns about payment |
 |---|------|-----------------------------------|
@@ -16,6 +17,7 @@ all* to a production-style webhook flow. It is deliberately minimal:
 | 1 | Redirect only | It doesn't (on purpose). Backend creates a payment request, buyer is redirected to checkout — and after paying, Kasera's `return_url` can send them back to `order.html?status=succeeded`. But a query param proves nothing: the shop backend still never learns about the payment. Shows *why* cases 2 and 3 exist. |
 | 2 | Webhook | Kasera POSTs a signed `payment.paid` event to `POST /webhook`; the backend verifies the HMAC signature and marks the order paid. The production way. |
 | 3 | Polling | The backend asks Kasera `GET /v1/transactions/:id` ("paid yet?" — the API answers `succeeded`) whenever the order page checks in. No public URL needed — great for local dev. |
+| 4 | [Subscription](public/langganan.html) | Not a one-off: one monthly *plan* (`POST /v1/subscription_plans`, made once), a *customer* and a *subscription*. Kasera issues an invoice per period and posts signed `subscription.*` / `invoice.*` events to `POST /webhook`. **Sandbox only:** the "Advance a month" button moves the subscription's test clock (`POST /v1/subscriptions/:id/advance`) so the renewal sweep issues the next invoice today — a live subscription is refused. Needs a `kp_test_` key in `KASERA_TEST_API_KEY`, and the subscriptions beta switched on for that account. |
 
 > **Status:** Kasera Pay is pre-launch — it runs in payment-sandbox mode, so demo
 > payments cannot complete with real money yet. Everything here works against
@@ -35,6 +37,14 @@ open http://localhost:3300
 `KASERA_API_BASE` defaults to `http://localhost:8888` (the local Kasera Pay
 dev gateway; the developer API lives under `<base>/v1/...`). Point it at the
 production host to run against the real thing.
+
+Case 4 uses `KASERA_TEST_API_KEY`, a **sandbox** key (`kp_test_...`, Dashboard →
+Developer → API keys, Sandbox tab). A subscription is sandbox or live by the key
+that created it, and only a sandbox one can have its clock moved, so the
+recurring case needs a test key even where the one-off cases run on a live one.
+It falls back to `KASERA_API_KEY`. The subscriptions surface is a per-account
+beta: if Kasera answers 404, the page says so in one line — ask Kasera to enable
+it for your account.
 
 ### Webhooks in local dev
 
