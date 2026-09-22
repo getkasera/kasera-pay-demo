@@ -1,10 +1,13 @@
 // Kasera Pay demo shop — the whole backend in one file, Go stdlib only.
 //
-// It serves the static pages in ./public and exposes three endpoints:
+// It serves the static pages in ./public and exposes these endpoints:
 //
-//	POST /api/orders      create an order + a Kasera transaction
-//	GET  /api/orders/{id} read an order's status (polling case refreshes from Kasera)
-//	POST /webhook         receive Kasera's signed payment.paid callback
+//	POST /api/orders                    create an order + a Kasera transaction
+//	GET  /api/orders/{id}               read an order's status (polling case refreshes from Kasera)
+//	POST /webhook                       receive Kasera's signed callbacks (payment.paid, subscription.*, invoice.*)
+//	POST /api/subscriptions             case 4: a customer + a monthly subscription (sandbox)
+//	GET  /api/subscriptions/{id}        the subscription, its invoices, and the webhook events seen for it
+//	POST /api/subscriptions/{id}/advance move its sandbox clock one month — the renewal sweep does the rest
 //
 // Read it top to bottom; the code is the documentation.
 package main
@@ -23,6 +26,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // ---------------------------------------------------------------------------
@@ -84,6 +88,11 @@ var (
 	apiKey        = os.Getenv("KASERA_API_KEY")
 	apiBase       = envOr("KASERA_API_BASE", "http://localhost:8888")
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
+	// testAPIKey is a SANDBOX key (kp_test_...) for case 4. A subscription is
+	// sandbox or live by the key that created it, and only a sandbox one can
+	// have its clock moved — so the recurring case needs a test key even where
+	// the one-off cases run on a live key. Falls back to KASERA_API_KEY.
+	testAPIKey = envOr("KASERA_TEST_API_KEY", os.Getenv("KASERA_API_KEY"))
 	// publicURL is this demo's own https origin (e.g. https://demo-pay.kasera.id).
 	// When set, orders carry a return_url so the checkout sends the buyer back
 	// to the order page after paying. Kasera only accepts https return URLs —
@@ -157,20 +166,381 @@ func getTransaction(id string) (*transaction, error) {
 }
 
 func doKasera(req *http.Request) (*transaction, error) {
+	var tx transaction
+	if _, err := kaseraJSON(req, &tx); err != nil {
+		return nil, err
+	}
+	return &tx, nil
+}
+
+// kaseraJSON sends one request and decodes the JSON answer into out. A
+// non-2xx is an error carrying the status, so a caller can tell a 404 (the
+// subscriptions surface is not enabled for this account) from anything else.
+func kaseraJSON(req *http.Request, out any) (int, error) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	defer res.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return nil, fmt.Errorf("kasera answered %d: %s", res.StatusCode, raw)
+		return res.StatusCode, fmt.Errorf("kasera answered %d: %s", res.StatusCode, raw)
 	}
-	var tx transaction
-	if err := json.Unmarshal(raw, &tx); err != nil {
+	if out != nil {
+		if err := json.Unmarshal(raw, out); err != nil {
+			return res.StatusCode, err
+		}
+	}
+	return res.StatusCode, nil
+}
+
+// ---------------------------------------------------------------------------
+// Case 4 — a monthly membership, run through a renewal without waiting a
+// month. Three Kasera objects: a plan (made once, reused), a customer, a
+// subscription. The first invoice is issued at once; every later one is
+// issued by Kasera's renewal sweep when the subscription's clock crosses the
+// period end. In sandbox that clock can be moved by hand.
+// ---------------------------------------------------------------------------
+
+const (
+	planCode   = "member-threads"
+	planName   = "Member Kasera Threads"
+	planAmount = 49000 // Rp 49.000 a month, whole rupiah
+)
+
+// The slices of Kasera's subscription objects this demo reads. The real
+// responses carry more (trial, quantity, discount, tax…).
+type subscription struct {
+	ID          string `json:"id"` // "sub_..."
+	CustomerID  string `json:"customer_id"`
+	PlanID      string `json:"plan_id"`
+	Status      string `json:"status"` // pending_first_payment | active | past_due | paused | canceled
+	PeriodStart string `json:"current_period_start"`
+	PeriodEnd   string `json:"current_period_end"`
+	PaidThrough string `json:"paid_through,omitempty"`
+	IsTest      bool   `json:"is_test"`
+	TestClock   string `json:"test_clock,omitempty"` // where the sandbox clock stands, once moved
+}
+
+type invoice struct {
+	ID             string `json:"id"` // "inv_..."
+	Number         string `json:"number"`
+	SubscriptionID string `json:"subscription_id"`
+	Status         string `json:"status"` // open | paid | overdue | void | uncollectible
+	Total          int64  `json:"total"`
+	PeriodStart    string `json:"period_start"`
+	PeriodEnd      string `json:"period_end"`
+	DueAt          string `json:"due_at"`
+	PaidAt         string `json:"paid_at,omitempty"`
+	// PayURL is ours, not Kasera's: the hosted invoice page the customer pays
+	// on, built from the invoice id.
+	PayURL string `json:"pay_url"`
+}
+
+// A webhook event as this shop saw it — the part of the stream case 4 shows.
+type seenEvent struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+	At   string `json:"at"`
+}
+
+// Member is what this shop keeps about a subscriber. The subscription and
+// its invoices are read fresh from Kasera on every GET — Kasera is the
+// source of truth for money, the shop only remembers who signed up.
+type Member struct {
+	ID             string      `json:"id"`
+	Name           string      `json:"name"`
+	Email          string      `json:"email"`
+	CustomerID     string      `json:"customer_id"`
+	SubscriptionID string      `json:"subscription_id"`
+	Events         []seenEvent `json:"events"`
+}
+
+var (
+	members = map[string]*Member{} // guarded by mu, like orders
+	planID  string                 // cached after the first ensurePlan
+)
+
+func kaseraReq(method, path string, payload any) (*http.Request, error) {
+	var body io.Reader
+	if payload != nil {
+		b, _ := json.Marshal(payload)
+		body = bytes.NewReader(b)
+	}
+	req, err := http.NewRequest(method, apiBase+path, body)
+	if err != nil {
 		return nil, err
 	}
-	return &tx, nil
+	req.Header.Set("Authorization", "Bearer "+testAPIKey)
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return req, nil
+}
+
+// ensurePlan finds the demo's plan by code, creating it the first time. A
+// plan is a price list entry, not a purchase: making it once is the whole
+// setup, and the code makes the lookup idempotent across restarts.
+func ensurePlan() (string, int, error) {
+	mu.Lock()
+	cached := planID
+	mu.Unlock()
+	if cached != "" {
+		return cached, 200, nil
+	}
+	req, err := kaseraReq("GET", "/v1/subscription_plans?limit=100", nil)
+	if err != nil {
+		return "", 0, err
+	}
+	var list struct {
+		Data []struct {
+			ID       string `json:"id"`
+			Code     string `json:"code"`
+			Archived bool   `json:"archived"`
+		} `json:"data"`
+	}
+	if code, err := kaseraJSON(req, &list); err != nil {
+		return "", code, err
+	}
+	for _, p := range list.Data {
+		if p.Code == planCode && !p.Archived {
+			mu.Lock()
+			planID = p.ID
+			mu.Unlock()
+			return p.ID, 200, nil
+		}
+	}
+	req, err = kaseraReq("POST", "/v1/subscription_plans", map[string]any{
+		"code":           planCode,
+		"name":           planName,
+		"amount":         planAmount,
+		"interval_unit":  "month",
+		"interval_count": 1,
+	})
+	if err != nil {
+		return "", 0, err
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if code, err := kaseraJSON(req, &created); err != nil {
+		return "", code, err
+	}
+	mu.Lock()
+	planID = created.ID
+	mu.Unlock()
+	return created.ID, 201, nil
+}
+
+// subscriptionsUnavailable turns Kasera's 404 on the whole surface into the
+// one-line explanation the page shows instead of a broken form: the
+// subscriptions beta is switched on per merchant account.
+func subscriptionsUnavailable(w http.ResponseWriter, code int, err error) bool {
+	if code == 404 {
+		httpErr(w, 503, "subscriptions are not enabled for this Kasera account yet (the beta is switched on per merchant) — ask Kasera to enable it for the key in KASERA_TEST_API_KEY")
+		return true
+	}
+	return false
+}
+
+// handleCreateMember: name + email in, a customer and a monthly subscription
+// out. The opening invoice is issued by Kasera at once, with a hosted page to
+// pay it on; the subscription activates when it is paid.
+func handleCreateMember(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 4<<10)).Decode(&in); err != nil {
+		httpErr(w, 400, "invalid JSON body")
+		return
+	}
+	in.Name, in.Email = strings.TrimSpace(in.Name), strings.TrimSpace(in.Email)
+	if in.Name == "" || !strings.Contains(in.Email, "@") {
+		httpErr(w, 400, "name and a valid email are required")
+		return
+	}
+	if testAPIKey == "" {
+		httpErr(w, 503, "KASERA_TEST_API_KEY is not set — see .env.example")
+		return
+	}
+	plan, code, err := ensurePlan()
+	if err != nil {
+		log.Printf("ensure plan: %v", err)
+		if !subscriptionsUnavailable(w, code, err) {
+			httpErr(w, 502, "could not set up the plan with Kasera")
+		}
+		return
+	}
+
+	m := &Member{ID: randomID(), Name: in.Name, Email: in.Email, Events: []seenEvent{}}
+
+	req, _ := kaseraReq("POST", "/v1/subscription_customers", map[string]any{
+		"external_id": m.ID, // our member id, so the customer links back to us
+		"name":        in.Name,
+		"email":       in.Email,
+	})
+	var cust struct {
+		ID string `json:"id"`
+	}
+	if code, err := kaseraJSON(req, &cust); err != nil {
+		log.Printf("create customer: %v", err)
+		if !subscriptionsUnavailable(w, code, err) {
+			httpErr(w, 502, "could not create the customer with Kasera")
+		}
+		return
+	}
+	m.CustomerID = cust.ID
+
+	req, _ = kaseraReq("POST", "/v1/subscriptions", map[string]any{
+		"customer_id": cust.ID,
+		"plan_id":     plan,
+		"external_id": m.ID,
+		// Sandbox by intent, on top of the key: only a sandbox subscription
+		// can have its clock moved, and this case is about moving it.
+		"is_test": true,
+	})
+	// Same idempotency practice as the one-off order (see createTransaction).
+	req.Header.Set("Idempotency-Key", "member-"+m.ID)
+	var sub subscription
+	if _, err := kaseraJSON(req, &sub); err != nil {
+		log.Printf("create subscription: %v", err)
+		httpErr(w, 502, "could not create the subscription with Kasera")
+		return
+	}
+	m.SubscriptionID = sub.ID
+
+	mu.Lock()
+	members[m.ID] = m
+	mu.Unlock()
+
+	writeJSON(w, 201, memberView(m, &sub))
+}
+
+// memberView is the page's whole model: who, the subscription as Kasera
+// sees it now, its invoices, and the events this shop's webhook has seen.
+func memberView(m *Member, sub *subscription) map[string]any {
+	invoices, err := listInvoices(sub.ID)
+	if err != nil {
+		log.Printf("list invoices %s: %v", sub.ID, err)
+	}
+	mu.Lock()
+	events := append([]seenEvent{}, m.Events...)
+	mu.Unlock()
+	return map[string]any{
+		"member":       m,
+		"subscription": sub,
+		"invoices":     invoices,
+		"events":       events,
+	}
+}
+
+func getSubscription(id string) (*subscription, error) {
+	req, err := kaseraReq("GET", "/v1/subscriptions/"+id, nil)
+	if err != nil {
+		return nil, err
+	}
+	var sub subscription
+	if _, err := kaseraJSON(req, &sub); err != nil {
+		return nil, err
+	}
+	return &sub, nil
+}
+
+// listInvoices reads the sandbox invoices and keeps the ones for this
+// subscription, oldest first. The API lists per account, not per
+// subscription; a shop with many members would key its own copy by
+// subscription_id from the invoice.* webhooks instead.
+func listInvoices(subID string) ([]invoice, error) {
+	req, err := kaseraReq("GET", "/v1/subscription_invoices?limit=100", nil)
+	if err != nil {
+		return nil, err
+	}
+	var list struct {
+		Data []invoice `json:"data"`
+	}
+	if _, err := kaseraJSON(req, &list); err != nil {
+		return nil, err
+	}
+	out := []invoice{}
+	for _, inv := range list.Data {
+		if inv.SubscriptionID == subID {
+			inv.PayURL = payURL(inv.ID)
+			out = append(out, inv)
+		}
+	}
+	// Oldest first reads as a timeline; the API answers newest first.
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out, nil
+}
+
+// payURL is the hosted invoice page the customer pays on. It lives on the
+// same host as the API and is addressed by the bare id: the API's ids carry
+// an inv_ prefix, the page (like the link in Kasera's own reminder emails)
+// does not.
+func payURL(invoiceID string) string {
+	return apiBase + "/i/" + strings.TrimPrefix(invoiceID, "inv_")
+}
+
+func handleGetMember(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	m := members[r.PathValue("id")]
+	mu.Unlock()
+	if m == nil {
+		httpErr(w, 404, "no such member (note: members are in-memory and vanish on restart)")
+		return
+	}
+	sub, err := getSubscription(m.SubscriptionID)
+	if err != nil {
+		log.Printf("read subscription %s: %v", m.SubscriptionID, err)
+		httpErr(w, 502, "could not read the subscription from Kasera")
+		return
+	}
+	writeJSON(w, 200, memberView(m, sub))
+}
+
+// handleAdvance moves the sandbox clock one month past where it stands.
+// This bills nothing by itself: Kasera's renewal sweep then does, on its next
+// pass, exactly what it does in production — issues the invoice for the
+// cycle crossed and extends access when it is paid. The page keeps reading
+// until the new invoice shows up.
+func handleAdvance(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	m := members[r.PathValue("id")]
+	mu.Unlock()
+	if m == nil {
+		httpErr(w, 404, "no such member")
+		return
+	}
+	cur, err := getSubscription(m.SubscriptionID)
+	if err != nil {
+		httpErr(w, 502, "could not read the subscription from Kasera")
+		return
+	}
+	to := monthLater(cur.TestClock, time.Now())
+	req, _ := kaseraReq("POST", "/v1/subscriptions/"+m.SubscriptionID+"/advance", map[string]any{
+		"to": to.Format(time.RFC3339),
+	})
+	var sub subscription
+	if _, err := kaseraJSON(req, &sub); err != nil {
+		log.Printf("advance %s: %v", m.SubscriptionID, err)
+		httpErr(w, 502, "Kasera refused to move the clock — only a sandbox subscription can be advanced, and only forward")
+		return
+	}
+	writeJSON(w, 200, memberView(m, &sub))
+}
+
+// monthLater is one calendar month past the subscription's clock — which is
+// test_clock once it has been moved, and the wall clock before that. One
+// extra hour clears the period end whatever the day-of-month arithmetic did.
+func monthLater(testClock string, now time.Time) time.Time {
+	standing := now
+	if t, err := time.Parse(time.RFC3339, testClock); err == nil {
+		standing = t
+	}
+	return standing.AddDate(0, 1, 0).Add(time.Hour)
 }
 
 // ---------------------------------------------------------------------------
@@ -290,11 +660,17 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Signature checked — NOW the payload can be trusted.
 	var ev struct {
-		ID   string `json:"id"`   // "evt_..." — dedupe on this in a real system
-		Type string `json:"type"` // "payment.paid"
-		Data struct {
+		ID        string `json:"id"`   // "evt_..." — dedupe on this in a real system
+		Type      string `json:"type"` // "payment.paid", "subscription.*", "invoice.*"
+		CreatedAt string `json:"created_at"`
+		Data      struct {
 			PaymentRequestID string `json:"payment_request_id"`
 			ExternalID       string `json:"external_id"` // our order ID, echoed back
+			// Case 4: a subscription.* event's data IS the subscription
+			// (id sub_...); an invoice.* event's data is the invoice, which
+			// names its subscription.
+			ID             string `json:"id"`
+			SubscriptionID string `json:"subscription_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &ev); err != nil {
@@ -302,17 +678,46 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ev.Type == "payment.paid" {
+	switch {
+	case ev.Type == "payment.paid":
 		mu.Lock()
 		if o := orders[ev.Data.ExternalID]; o != nil {
 			o.Status = "paid" // idempotent: paid stays paid on redelivery
 		}
 		mu.Unlock()
+	case strings.HasPrefix(ev.Type, "subscription.") || strings.HasPrefix(ev.Type, "invoice."):
+		recordSubscriptionEvent(ev.Type, ev.ID, ev.CreatedAt, ev.Data.ID, ev.Data.SubscriptionID)
 	}
 	// Unknown order or unknown event type still gets a 200: it is not
 	// Kasera's problem that our in-memory store forgot (or that we don't
 	// handle that event type) — a non-2xx would just make Kasera retry.
 	w.WriteHeader(http.StatusOK)
+}
+
+// recordSubscriptionEvent files a subscription.* or invoice.* event under the
+// member it belongs to, so the page can show the stream a real shop would
+// react to (activate access on subscription.activated, chase on
+// invoice.overdue, revoke on subscription.canceled). Redelivery is harmless:
+// the same event id is filed once.
+func recordSubscriptionEvent(typ, id, at, dataID, dataSubID string) {
+	subID := dataSubID
+	if strings.HasPrefix(typ, "subscription.") {
+		subID = dataID
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	for _, m := range members {
+		if m.SubscriptionID != subID {
+			continue
+		}
+		for _, e := range m.Events {
+			if e.ID == id {
+				return
+			}
+		}
+		m.Events = append(m.Events, seenEvent{ID: id, Type: typ, At: at})
+		return
+	}
 }
 
 // verifySignature checks Kasera's webhook signature: the Kasera-Signature
@@ -377,6 +782,7 @@ func main() {
 	apiKey = os.Getenv("KASERA_API_KEY")
 	apiBase = envOr("KASERA_API_BASE", "http://localhost:8888")
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
+	testAPIKey = envOr("KASERA_TEST_API_KEY", apiKey)
 
 	mux := http.NewServeMux()
 	// no-cache means "revalidate before using", not "don't cache": the browser
@@ -390,9 +796,13 @@ func main() {
 	mux.HandleFunc("POST /api/orders", handleCreateOrder)
 	mux.HandleFunc("GET /api/orders/{id}", handleGetOrder)
 	mux.HandleFunc("POST /webhook", handleWebhook)
+	// Case 4 — subscriptions (sandbox).
+	mux.HandleFunc("POST /api/subscriptions", handleCreateMember)
+	mux.HandleFunc("GET /api/subscriptions/{id}", handleGetMember)
+	mux.HandleFunc("POST /api/subscriptions/{id}/advance", handleAdvance)
 
 	addr := ":" + envOr("PORT", "3300")
-	log.Printf("Kasera Threads demo on http://localhost%s (API base %s, key set: %v, webhook secret set: %v)",
-		addr, apiBase, apiKey != "", webhookSecret != "")
+	log.Printf("Kasera Threads demo on http://localhost%s (API base %s, key set: %v, sandbox key set: %v, webhook secret set: %v)",
+		addr, apiBase, apiKey != "", strings.HasPrefix(testAPIKey, "kp_test_"), webhookSecret != "")
 	log.Fatal(http.ListenAndServe(addr, mux))
 }

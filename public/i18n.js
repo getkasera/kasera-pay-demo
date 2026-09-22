@@ -13,6 +13,7 @@ const I18N = {
   "nav.case1": { id: `1 · Redirect`, en: `1 · Redirect` },
   "nav.case2": { id: `2 · Webhook`, en: `2 · Webhook` },
   "nav.case3": { id: `3 · Polling`, en: `3 · Polling` },
+  "nav.case4": { id: `4 · Langganan`, en: `4 · Subscription` },
   "theme.dark": { id: `Gelap`, en: `Dark` },
   "theme.light": { id: `Terang`, en: `Light` },
   "footer.tag": { id: `Toko demo Kasera Pay`, en: `Kasera Pay demo shop` },
@@ -21,8 +22,8 @@ const I18N = {
 
   // --- index.html ------------------------------------------------------
   "title.index": {
-    id: `Demo Kasera Pay — empat cara menerima pembayaran`,
-    en: `Kasera Pay demo — four ways to get paid`,
+    id: `Demo Kasera Pay — lima cara menerima pembayaran`,
+    en: `Kasera Pay demo — five ways to get paid`,
   },
   "home.eyebrow": {
     id: `Simulasi fitur pembayaran`,
@@ -127,14 +128,14 @@ const I18N = {
     en: `The status flips to <strong class="hl">paid</strong> — money heads to
       your bank account.`,
   },
-  "home.cases.k": { id: `EMPAT KASUSNYA`, en: `THE FOUR CASES` },
+  "home.cases.k": { id: `LIMA KASUSNYA`, en: `THE FIVE CASES` },
   "home.cases.h2": {
     id: `Dari nol kode sampai alur produksi`,
     en: `From zero code to the production flow`,
   },
   "home.cases.lede": {
-    id: `Toko yang sama dibangun empat kali — satu untuk tiap cara integrasi.`,
-    en: `The same shop, built four times — once per way of integrating.`,
+    id: `Toko yang sama dibangun lima kali — satu untuk tiap cara integrasi, termasuk langganan bulanan.`,
+    en: `The same shop, built five times — once per way of integrating, including a monthly subscription.`,
   },
   "home.case0.t": { id: `Tanpa API sama sekali`, en: `No API at all` },
   "home.case0.p": {
@@ -162,6 +163,85 @@ const I18N = {
     en: `Your server asks Kasera "paid yet?" until it is. No public URL
       needed — good for local dev.`,
   },
+  "home.case4.t": { id: `Langganan`, en: `Subscription` },
+  "home.case4.p": {
+    id: `Plan bulanan, customer, subscription — Kasera menerbitkan tagihan
+      tiap periode. Majukan jam sandbox dan lihat perpanjangannya hari ini.`,
+    en: `A monthly plan, a customer, a subscription — Kasera issues an invoice
+      per period. Advance the sandbox clock and watch a renewal today.`,
+  },
+  // --- langganan.html (case 4) ------------------------------------------
+  "title.sub": { id: `Langganan · demo Kasera Pay`, en: `Subscription · Kasera Pay demo` },
+  "sub.h1": { id: `Member Kasera Threads`, en: `Kasera Threads membership` },
+  "sub.name": { id: `Nama`, en: `Name` },
+  "sub.email": { id: `Email`, en: `Email` },
+  "sub.signup": { id: `Langganan Rp 49.000 / bulan`, en: `Subscribe for Rp 49,000 / month` },
+  "sub.signupHint": {
+    id: `Tidak ada uang sungguhan: ini langganan sandbox. Kasera langsung
+      menerbitkan tagihan pertama beserta halaman bayarnya.`,
+    en: `No real money: this is a sandbox subscription. Kasera issues the first
+      invoice at once, with a page to pay it on.`,
+  },
+  "sub.subH2": { id: `Langganan`, en: `Subscription` },
+  "sub.who": { id: `Member`, en: `Member` },
+  "sub.id": { id: `ID langganan Kasera`, en: `Kasera subscription id` },
+  "sub.status": { id: `Status`, en: `Status` },
+  "sub.period": { id: `Periode berjalan`, en: `Current period` },
+  "sub.clock": { id: `Jam sandbox`, en: `Sandbox clock` },
+  "sub.clockNow": { id: `belum dimajukan (jam sungguhan)`, en: `not moved yet (wall clock)` },
+  "sub.invH2": { id: `Tagihan`, en: `Invoices` },
+  "sub.invHint": {
+    id: `Setiap periode punya satu tagihan. Yang pertama terbit saat mendaftar;
+      berikutnya diterbitkan sweep perpanjangan Kasera begitu jam langganan
+      melewati akhir periode.`,
+    en: `One invoice per period. The first is issued at sign-up; the next ones
+      by Kasera's renewal sweep once the subscription's clock passes the period end.`,
+  },
+  "sub.invNo": { id: `No.`, en: `No.` },
+  "sub.invPeriod": { id: `Periode`, en: `Period` },
+  "sub.invTotal": { id: `Total`, en: `Total` },
+  "sub.invStatus": { id: `Status`, en: `Status` },
+  "sub.pay": { id: `Bayar →`, en: `Pay →` },
+  "sub.advance": { id: `Majukan sebulan`, en: `Advance a month` },
+  "sub.advanceHint": {
+    id: `Hanya ada untuk langganan sandbox: memindahkan jam langganan ini satu
+      bulan ke depan, lalu sweep perpanjangan Kasera menerbitkan tagihan
+      berikutnya — persis seperti di produksi, tanpa menunggu sebulan.`,
+    en: `Sandbox subscriptions only: moves this subscription's clock one month
+      ahead, and Kasera's renewal sweep then issues the next invoice — exactly
+      as in production, without waiting a month.`,
+  },
+  "sub.waiting": {
+    id: `Jam sudah maju. Menunggu sweep perpanjangan Kasera menerbitkan tagihan
+      berikutnya (paling lama 5 menit)…`,
+    en: `Clock moved. Waiting for Kasera's renewal sweep to issue the next invoice
+      (up to 5 minutes)…`,
+  },
+  "sub.waitedOut": {
+    id: `Belum muncul juga — muat ulang halaman ini sebentar lagi.`,
+    en: `Not there yet — reload this page in a moment.`,
+  },
+  "sub.evH2": { id: `Event webhook yang diterima toko ini`, en: `Webhook events this shop received` },
+  "sub.evHint": {
+    id: `Inilah yang dipakai toko sungguhan: <code>subscription.activated</code>
+      membuka akses, <code>invoice.overdue</code> menagih,
+      <code>subscription.canceled</code> mencabut akses. Setiap event
+      ditandatangani dan diverifikasi di <code>POST /webhook</code>, sama
+      seperti <code>payment.paid</code>.`,
+    en: `This is what a real shop acts on: <code>subscription.activated</code>
+      opens access, <code>invoice.overdue</code> chases,
+      <code>subscription.canceled</code> revokes. Every event is signed and
+      verified in <code>POST /webhook</code>, just like <code>payment.paid</code>.`,
+  },
+  "sub.evNone": { id: `Belum ada event yang masuk.`, en: `No events yet.` },
+  "sub.again": { id: `Buat langganan lain →`, en: `Start another subscription →` },
+  "sub.gone": {
+    id: `Member tidak ditemukan. Member hidup di memori backend demo dan hilang
+      saat backend di-restart — buat yang baru di atas.`,
+    en: `Member not found. Members live in the demo backend's memory and vanish
+      on restart — start a new one above.`,
+  },
+  "sub.failed": { id: `Gagal:`, en: `Failed:` },
   // --- store.html + store.js -------------------------------------------
   "title.store": {
     id: `Kasera Threads · demo Kasera Pay`,

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="title.sub">Langganan · demo Kasera Pay</title>
+  <script>
+    // Theme before first paint — a saved choice wins, else follow the OS.
+    if ((localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches && "dark")) === "dark")
+      document.documentElement.dataset.theme = "dark";
+  </script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a class="brand" href="index.html">Kasera Pay demo</a>
+      <a href="nonapi.html" data-i18n="nav.case0">0 · Tanpa kode</a>
+      <a href="store.html?case=redirect" data-i18n="nav.case1">1 · Redirect</a>
+      <a href="store.html?case=webhook" data-i18n="nav.case2">2 · Webhook</a>
+      <a href="store.html?case=polling" data-i18n="nav.case3">3 · Polling</a>
+      <a href="langganan.html" data-i18n="nav.case4">4 · Langganan</a>
+      <button id="lang-toggle" class="toggle" title="Bahasa / Language"></button>
+      <button id="theme-toggle" class="toggle" title="Tema / Theme"></button>
+    </nav>
+  </header>
+
+  <main>
+    <h1 data-i18n="sub.h1">Member Kasera Threads</h1>
+    <div class="note" id="case-copy"></div>
+
+    <!-- Step 1: sign up. Name + email is all a membership needs. -->
+    <form id="signup" class="order" style="display:grid;gap:.75rem;max-width:28rem">
+      <label><span class="muted" data-i18n="sub.name">Nama</span><br>
+        <input id="name" required maxlength="80" placeholder="Ahmad" style="width:100%"></label>
+      <label><span class="muted" data-i18n="sub.email">Email</span><br>
+        <input id="email" type="email" required maxlength="120" placeholder="ahmad@contoh.id" style="width:100%"></label>
+      <div><button type="submit" id="signup-btn" data-i18n="sub.signup">Langganan Rp 49.000 / bulan</button></div>
+      <p class="muted" data-i18n="sub.signupHint" style="margin:0">Tidak ada uang sungguhan:
+        ini langganan sandbox. Kasera langsung menerbitkan tagihan pertama beserta halaman
+        bayarnya.</p>
+    </form>
+
+    <!-- Step 2: what Kasera holds about this member. -->
+    <section id="member" hidden>
+      <h2 data-i18n="sub.subH2">Langganan</h2>
+      <dl class="order">
+        <dt data-i18n="sub.who">Member</dt><dd id="m-who"></dd>
+        <dt data-i18n="sub.id">ID langganan Kasera</dt><dd><code id="s-id"></code></dd>
+        <dt data-i18n="sub.status">Status</dt><dd><span class="status" id="s-status"></span></dd>
+        <dt data-i18n="sub.period">Periode berjalan</dt><dd id="s-period"></dd>
+        <dt data-i18n="sub.clock">Jam sandbox</dt><dd id="s-clock"></dd>
+      </dl>
+
+      <h2 data-i18n="sub.invH2">Tagihan</h2>
+      <p class="muted" data-i18n="sub.invHint">Setiap periode punya satu tagihan. Yang pertama
+        terbit saat mendaftar; berikutnya diterbitkan sweep perpanjangan Kasera begitu jam
+        langganan melewati akhir periode.</p>
+      <div class="table-wrap">
+        <table id="invoices">
+          <thead><tr>
+            <th data-i18n="sub.invNo">No.</th>
+            <th data-i18n="sub.invPeriod">Periode</th>
+            <th data-i18n="sub.invTotal">Total</th>
+            <th data-i18n="sub.invStatus">Status</th>
+            <th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p>
+        <button id="advance" data-i18n="sub.advance">Majukan sebulan</button>
+        <span class="muted" id="advance-hint" data-i18n="sub.advanceHint">Hanya ada untuk
+          langganan sandbox: memindahkan jam langganan ini satu bulan ke depan, lalu sweep
+          perpanjangan Kasera menerbitkan tagihan berikutnya — persis seperti di produksi,
+          tanpa menunggu sebulan.</span>
+      </p>
+      <p class="note" id="waiting" hidden data-i18n="sub.waiting">Jam sudah maju. Menunggu
+        sweep perpanjangan Kasera menerbitkan tagihan berikutnya (paling lama 5 menit)…</p>
+
+      <h2 data-i18n="sub.evH2">Event webhook yang diterima toko ini</h2>
+      <p class="muted" data-i18n="sub.evHint">Inilah yang dipakai toko sungguhan:
+        <code>subscription.activated</code> membuka akses, <code>invoice.overdue</code> menagih,
+        <code>subscription.canceled</code> mencabut akses. Setiap event ditandatangani dan
+        diverifikasi di <code>POST /webhook</code>, sama seperti <code>payment.paid</code>.</p>
+      <ul id="events" class="muted"><li data-i18n="sub.evNone">Belum ada event yang masuk.</li></ul>
+
+      <p><a href="langganan.html" class="muted" data-i18n="sub.again">Buat langganan lain →</a></p>
+    </section>
+
+    <p id="gone" class="muted" data-i18n="sub.gone" hidden>Member tidak ditemukan. Member
+      hidup di memori backend demo dan hilang saat backend di-restart — buat yang baru di atas.</p>
+  </main>
+
+  <footer>
+    <span data-i18n="footer.tag">Toko demo Kasera Pay</span> —
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/public/langganan.html"
+       data-i18n="footer.page">kode halaman ini</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo/blob/main/main.go">main.go</a> ·
+    <a href="https://github.com/getkasera/kasera-pay-demo" data-i18n="footer.repo">repo GitHub</a>
+  </footer>
+
+  <script src="i18n.js"></script>
+  <script src="store.js"></script>
+  <script>
+    // Case 4 in one page: sign up → Kasera holds the subscription → move the
+    // sandbox clock → the renewal sweep issues the next invoice. The browser
+    // only ever talks to OUR backend; the kp_test_ key never leaves the server.
+    const COPY = {
+      id: `<strong>Case 4 — langganan.</strong> Bukan sekali bayar: satu <em>plan</em>
+        bulanan (dibuat sekali lewat <code>POST /v1/subscription_plans</code>), satu
+        <em>customer</em>, satu <em>subscription</em>. Kasera menerbitkan tagihan tiap
+        periode dan mengirim event ke webhook toko. Tombol <em>Majukan sebulan</em>
+        memakai jam sandbox (<code>POST /v1/subscriptions/:id/advance</code>) supaya
+        perpanjangan bisa dilihat hari ini.`,
+      en: `<strong>Case 4 — subscription.</strong> Not a one-off: one monthly <em>plan</em>
+        (made once via <code>POST /v1/subscription_plans</code>), one <em>customer</em>, one
+        <em>subscription</em>. Kasera issues an invoice per period and posts events to the
+        shop's webhook. <em>Advance a month</em> uses the sandbox clock
+        (<code>POST /v1/subscriptions/:id/advance</code>) so a renewal shows up today.`,
+    };
+
+    const $ = (s) => document.querySelector(s);
+    const params = new URLSearchParams(location.search);
+    let memberId = params.get("member");
+    let view = null;       // last response, so a language switch can re-render
+    let invoicesBefore = 0; // how many invoices existed before the last advance
+
+    function renderCopy() {
+      $("#case-copy").innerHTML = COPY[lang()];
+      if (view) render(view);
+    }
+    document.addEventListener("langchange", renderCopy);
+
+    const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(lang() === "id" ? "id-ID" : "en-GB",
+      { day: "numeric", month: "short", year: "numeric" }) : "—";
+    const fmtTime = (iso) => iso ? new Date(iso).toLocaleString(lang() === "id" ? "id-ID" : "en-GB") : "";
+    // Kasera's vocabulary onto the three pill colours this stylesheet has.
+    const pill = (s) => ({ active: "paid", paid: "paid", open: "pending", pending_first_payment: "pending",
+      past_due: "expired", overdue: "expired", canceled: "expired", void: "expired" }[s] || "pending");
+
+    function render(v) {
+      view = v;
+      const { member, subscription: s, invoices, events } = v;
+      $("#signup").hidden = true;
+      $("#member").hidden = false;
+      $("#m-who").textContent = `${member.name} · ${member.email}`;
+      $("#s-id").textContent = s.id;
+      const st = $("#s-status");
+      st.textContent = s.status;
+      st.className = "status " + pill(s.status);
+      $("#s-period").textContent = `${fmtDate(s.current_period_start)} → ${fmtDate(s.current_period_end)}`;
+      $("#s-clock").textContent = s.test_clock ? fmtTime(s.test_clock) : t("sub.clockNow");
+
+      const tb = $("#invoices tbody");
+      tb.innerHTML = "";
+      for (const inv of invoices) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><code>${inv.number}</code></td>
+          <td>${fmtDate(inv.period_start)} → ${fmtDate(inv.period_end)}</td>
+          <td>${formatRupiah(inv.total)}</td>
+          <td><span class="status ${pill(inv.status)}">${inv.status}</span></td>
+          <td>${inv.status === "open" || inv.status === "overdue"
+            ? `<a href="${inv.pay_url}" target="_blank" rel="noopener">${t("sub.pay")}</a>` : ""}</td>`;
+        tb.appendChild(tr);
+      }
+
+      const ul = $("#events");
+      ul.innerHTML = "";
+      if (!events.length) {
+        ul.innerHTML = `<li>${t("sub.evNone")}</li>`;
+      }
+      for (const e of events) {
+        const li = document.createElement("li");
+        li.innerHTML = `<code>${e.type}</code> <span class="muted">${fmtTime(e.at)} · ${e.id}</span>`;
+        ul.appendChild(li);
+      }
+    }
+
+    async function load() {
+      const res = await fetch("/api/subscriptions/" + encodeURIComponent(memberId));
+      if (!res.ok) {
+        $("#signup").hidden = true;
+        $("#gone").hidden = false;
+        return null;
+      }
+      const v = await res.json();
+      render(v);
+      return v;
+    }
+
+    $("#signup").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("#signup-btn");
+      btn.disabled = true;
+      const res = await fetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: $("#name").value, email: $("#email").value }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        $("#case-copy").innerHTML = `<strong>${t("sub.failed")}</strong> ${err.error || res.status}`;
+        $("#case-copy").classList.add("warn");
+        btn.disabled = false;
+        return;
+      }
+      const v = await res.json();
+      memberId = v.member.id;
+      history.replaceState(null, "", "langganan.html?member=" + memberId);
+      render(v);
+    });
+
+    // Advance, then keep reading until the renewal sweep has issued the next
+    // invoice — it runs every few minutes, and this is the only wait in the
+    // whole case.
+    $("#advance").addEventListener("click", async () => {
+      const btn = $("#advance");
+      btn.disabled = true;
+      invoicesBefore = view ? view.invoices.length : 0;
+      const res = await fetch("/api/subscriptions/" + encodeURIComponent(memberId) + "/advance", { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        $("#advance-hint").textContent = err.error || res.status;
+        btn.disabled = false;
+        return;
+      }
+      render(await res.json());
+      $("#waiting").hidden = false;
+      const until = Date.now() + 6 * 60 * 1000;
+      (async function poll() {
+        const v = await load();
+        if (v && v.invoices.length > invoicesBefore) {
+          $("#waiting").hidden = true;
+          btn.disabled = false;
+          return;
+        }
+        if (Date.now() < until) setTimeout(poll, 10000);
+        else { $("#waiting").textContent = t("sub.waitedOut"); btn.disabled = false; }
+      })();
+    });
+
+    renderCopy();
+    if (memberId) load();
+  </script>
+</body>
+</html>
